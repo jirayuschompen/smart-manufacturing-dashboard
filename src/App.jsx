@@ -127,7 +127,7 @@ const SmartManufacturingDashboard = () => {
       alertDeleted: 'ลบการแจ้งเตือนแล้ว',
     },
     en: {
-      title: 'Smart Manufacturing AI',
+      title: 'Smart Manufacturing AI สุดโหด',
       subtitle: 'Predictive Analytics Platform',
       notifications: 'Notifications',
       markAllRead: 'Mark all as read',
