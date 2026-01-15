@@ -227,10 +227,6 @@ if (user) {
   if (onLogin) onLogin();   // ส่งกลับ App.jsx
 }
 
-
-  const isConfigured = firebaseSDK && firebaseSDK.apps.length > 0 && 
-                       firebaseSDK.apps[0].options.apiKey !== "YOUR_API_KEY";
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center p-4">
       <div className="absolute inset-0 overflow-hidden">
@@ -348,23 +344,6 @@ if (user) {
               <p className="text-slate-500">{lang.welcome} {lang.platform}</p>
             </div>
 
-            {!isConfigured && (
-              <div className="mb-6 bg-yellow-50 border border-yellow-300 rounded-lg p-4">
-                <div className="flex items-start space-x-2">
-                  <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm text-yellow-800 font-medium">
-                      ⚠️ {lang.configWarning}
-                    </p>
-                    <p className="text-xs text-yellow-700 mt-1">
-                      {language === 'th' 
-                        ? 'แก้ไข firebaseConfig ในโค้ดด้วยข้อมูลจาก Firebase Console' 
-                        : 'Edit firebaseConfig in the code with your Firebase Console credentials'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {!isSignUp && (
               <div className="mb-6 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-lg p-4">
@@ -484,7 +463,7 @@ if (user) {
 
             <div className="mt-8 pt-6 border-t border-slate-200">
               <p className="text-xs text-slate-500 text-center">
-                {language === 'th' ? '© 2024 Smart Manufacturing AI. สงวนลิขสิทธิ์.' : '© 2024 Smart Manufacturing AI. All rights reserved.'}
+                {language === 'th' ? '© 2025 Smart Manufacturing AI. สงวนลิขสิทธิ์.' : '© 2025 Smart Manufacturing AI. All rights reserved.'}
               </p>
             </div>
           </div>
