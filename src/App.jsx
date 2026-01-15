@@ -1244,9 +1244,14 @@ const Dashboard = ({ onLogout }) => {
       )}
 
       {/* Navigation Tabs */}
-      <div className={`${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} border-b`}>
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex space-x-1">
+      <div className={`${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} border-b sticky top-16 z-30`}> 
+        {/* ^^^ เพิ่ม sticky top-16 เพื่อให้เมนูเกาะติดด้านบนเวลาเลื่อนดูเนื้อหา (ถัดจาก Header) */}
+        
+        <div className="max-w-7xl mx-auto px-4 lg:px-6">
+          
+          {/* เพิ่ม overflow-x-auto เพื่อให้เลื่อนแนวนอนได้ และ scrollbar-hide เพื่อซ่อนแถบเลื่อนให้สวยงาม */}
+          <div className="flex space-x-2 lg:space-x-1 overflow-x-auto scrollbar-hide py-2 lg:py-0">
+            
             {[
               { id: 'overview', label: 'Overview', icon: Activity },
               { id: 'forecast', label: 'Demand Forecasting', icon: TrendingUp },
@@ -1258,14 +1263,18 @@ const Dashboard = ({ onLogout }) => {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center space-x-2 px-6 py-4 border-b-2 transition-colors ${
-                    activeTab === tab.id
+                  className={`
+                    flex items-center space-x-2 px-4 py-3 lg:px-6 lg:py-4 border-b-2 transition-colors whitespace-nowrap flex-none
+                    ${/* flex-none สำคัญมาก! ป้องกันปุ่มถูกบีบให้เล็กลง */ ''}
+                    ${activeTab === tab.id
                       ? 'border-blue-500 text-blue-600 ' + (theme === 'dark' ? 'bg-slate-700' : 'bg-blue-50')
                       : (theme === 'dark' ? 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-700' : 'border-transparent text-slate-600 hover:text-slate-800 hover:bg-slate-50')
-                  }`}
+                    }
+                    rounded-t-lg text-sm lg:text-base font-medium
+                  `}
                 >
-                  <Icon className="w-4 h-4" />
-                  <span className="font-medium">
+                  <Icon className="w-4 h-4 lg:w-5 lg:h-5" />
+                  <span>
                     {tab.id === 'overview' ? currentLang.overview :
                      tab.id === 'forecast' ? currentLang.demandForecasting :
                      tab.id === 'planning' ? currentLang.productionPlanning :
