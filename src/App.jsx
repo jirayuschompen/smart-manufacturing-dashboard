@@ -1281,11 +1281,10 @@ const Dashboard = ({ onLogout }) => {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-6 py-8">
         {activeTab === 'overview' && (
-          // 1. แก้ไข Container หลัก: มือถือให้สูง Auto และเลื่อนได้ (overflow-y-auto) / คอมให้ฟิกซ์ความสูง (lg:h-...)
+          // 1. Container หลัก: Mobile=Auto (Scroll ได้), Desktop=Fix Height (ห้าม Scroll)
           <div className="flex flex-col h-auto lg:h-[calc(100vh-180px)] gap-4 overflow-y-auto lg:overflow-hidden pb-4 lg:pb-0">
             
             {/* --- ส่วนที่ 1: KPI Cards --- */}
-            {/* เพิ่ม flex-none เพื่อไม่ให้โดนบีบ */}
             <div className="flex-none grid grid-cols-2 lg:grid-cols-4 gap-4">
               {kpiCards.map((kpi, idx) => {
                 const Icon = kpi.icon;
@@ -1332,29 +1331,30 @@ const Dashboard = ({ onLogout }) => {
             {/* --- ส่วนที่ 2: Main Content Grid --- */}
             <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-0">
               
-              {/* คอลัมน์ซ้าย: กราฟ */}
-              <div className="lg:col-span-8 flex flex-col gap-4 h-auto lg:h-full lg:min-h-0">
+              {/* คอลัมน์ซ้าย: กราฟ (Charts) */}
+              <div className="lg:col-span-8 flex flex-col gap-4 h-auto lg:h-full">
                 
                 {/* 1. กราฟบน: Production Efficiency (OEE) */}
-                {/* แก้ไข: มือถือสูง 300px (h-[300px]) / คอมยืดเต็ม (lg:flex-1) */}
                 <div className={`h-[300px] lg:h-auto lg:flex-1 ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} rounded-xl shadow-sm border p-4 flex flex-col min-h-0`}>
                   <div className="flex justify-between items-center mb-2 flex-none">
                     <h3 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{currentLang.weeklyProduction}</h3>
+                    {/* ปุ่มเปลี่ยนช่วงเวลา (แก้ไขข้อความตามที่ขอ) */}
                     <div className={`flex rounded-lg border ${theme === 'dark' ? 'border-slate-600 bg-slate-700' : 'border-slate-200 bg-slate-50'} p-0.5`}>
                       {['daily', 'weekly', 'monthly', 'yearly'].map((period) => (
                         <button
                           key={period}
                           onClick={() => setProductionPeriod(period)}
-                          className={`px-2 lg:px-3 py-1 text-[10px] font-medium rounded-md transition-all ${
+                          className={`px-3 py-1 text-[10px] font-medium rounded-md transition-all ${
                             productionPeriod === period
                               ? (theme === 'dark' ? 'bg-slate-600 text-white shadow-sm' : 'bg-white text-blue-600 shadow-sm border border-slate-200')
                               : (theme === 'dark' ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-700')
                           }`}
                         >
+                          {/* แก้ไขตรงนี้: ใช้คำเต็ม Day, Week, Month, Year */}
                           {period === 'daily' ? (language === 'th' ? 'วัน' : 'Day') :
-                           period === 'weekly' ? (language === 'th' ? 'สัปดาห์' : 'Wk') :
-                           period === 'monthly' ? (language === 'th' ? 'เดือน' : 'Mo') :
-                           (language === 'th' ? 'ปี' : 'Yr')}
+                           period === 'weekly' ? (language === 'th' ? 'สัปดาห์' : 'Week') :
+                           period === 'monthly' ? (language === 'th' ? 'เดือน' : 'Month') :
+                           (language === 'th' ? 'ปี' : 'Year')}
                         </button>
                       ))}
                     </div>
@@ -1381,29 +1381,30 @@ const Dashboard = ({ onLogout }) => {
                 </div>
 
                 {/* 2. กราฟล่าง: Demand Trend */}
-                {/* แก้ไข: มือถือสูง 300px (h-[300px]) / คอมยืดเต็ม (lg:flex-1) */}
                 <div className={`h-[300px] lg:h-auto lg:flex-1 ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} rounded-xl shadow-sm border p-4 flex flex-col min-h-0`}>
                   <div className="flex justify-between items-center mb-2 flex-none">
                     <div className="flex items-center gap-4">
                       <h3 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{currentLang.demandTrend}</h3>
                     </div>
                     
+                    {/* ปุ่มเปลี่ยนช่วงเวลา (แก้ไขข้อความตามที่ขอ) */}
                     <div className="flex items-center gap-3">
                       <div className={`flex rounded-lg border ${theme === 'dark' ? 'border-slate-600 bg-slate-700' : 'border-slate-200 bg-slate-50'} p-0.5`}>
                         {['daily', 'weekly', 'monthly', 'yearly'].map((period) => (
                           <button
                             key={period}
                             onClick={() => setDemandPeriod(period)}
-                            className={`px-2 lg:px-3 py-1 text-[10px] font-medium rounded-md transition-all ${
+                            className={`px-3 py-1 text-[10px] font-medium rounded-md transition-all ${
                               demandPeriod === period
                                 ? (theme === 'dark' ? 'bg-slate-600 text-white shadow-sm' : 'bg-white text-blue-600 shadow-sm border border-slate-200')
                                 : (theme === 'dark' ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-700')
                             }`}
                           >
+                            {/* แก้ไขตรงนี้: ใช้คำเต็ม Day, Week, Month, Year */}
                             {period === 'daily' ? (language === 'th' ? 'วัน' : 'Day') :
-                             period === 'weekly' ? (language === 'th' ? 'สัปดาห์' : 'Wk') :
-                             period === 'monthly' ? (language === 'th' ? 'เดือน' : 'Mo') :
-                             (language === 'th' ? 'ปี' : 'Yr')}
+                             period === 'weekly' ? (language === 'th' ? 'สัปดาห์' : 'Week') :
+                             period === 'monthly' ? (language === 'th' ? 'เดือน' : 'Month') :
+                             (language === 'th' ? 'ปี' : 'Year')}
                           </button>
                         ))}
                       </div>
@@ -1442,10 +1443,9 @@ const Dashboard = ({ onLogout }) => {
                 </div>
               </div>
 
-              {/* คอลัมน์ขวา: รายการแจ้งเตือน & เครื่องจักร */}
+              {/* คอลัมน์ขวา: รายการแจ้งเตือน & เครื่องจักร (คงเดิม) */}
               <div className="lg:col-span-4 flex flex-col gap-4 h-auto lg:h-full lg:min-h-0">
                 {/* 1. Alerts List */}
-                {/* แก้ไข: มือถือสูง 300px / คอมยืดเต็ม */}
                 <div className={`h-[300px] lg:h-auto lg:flex-1 ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} rounded-xl shadow-sm border flex flex-col min-h-0 overflow-hidden`}>
                   <div className={`p-3 border-b ${theme === 'dark' ? 'border-slate-700' : 'border-slate-100'} flex-none flex justify-between items-center bg-opacity-50`}>
                     <div className="flex items-center gap-2">
@@ -1483,7 +1483,6 @@ const Dashboard = ({ onLogout }) => {
                 </div>
 
                 {/* 2. Machine Health List */}
-                {/* แก้ไข: มือถือสูง 300px / คอมยืดเต็ม */}
                 <div className={`h-[300px] lg:h-auto lg:flex-1 ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} rounded-xl shadow-sm border flex flex-col min-h-0 overflow-hidden`}>
                   <div className={`p-3 border-b ${theme === 'dark' ? 'border-slate-700' : 'border-slate-100'} flex-none flex items-center gap-2`}>
                     <div className="p-1.5 bg-blue-100 rounded-md">
