@@ -392,6 +392,7 @@ const Dashboard = ({ onLogout }) => {
   ];
 
   // ข้อมูล Production Efficiency
+  // eslint-disable-next-line no-unused-vars
   const productionData = [
     { day: 'Mon', oee: 85, availability: 92, performance: 88, quality: 98 },
     { day: 'Tue', oee: 87, availability: 94, performance: 90, quality: 97 },
@@ -536,6 +537,7 @@ const Dashboard = ({ onLogout }) => {
 
   const unreadCount = alerts.filter(a => !a.read).length;
 
+  // eslint-disable-next-line no-unused-vars
   const getStatusColor = (status) => {
     switch(status) {
       case 'good': return 'bg-green-100 text-green-800';
@@ -655,12 +657,25 @@ const Dashboard = ({ onLogout }) => {
     setTimeout(() => setShowSuccessMessage(false), 5000);
   };
 
-  const handleLogout = () => {
-    // เรียกใช้ฟังก์ชัน onLogout เพื่อแจ้งให้ App รู้ว่าต้องการออกจากระบบ
+  const handleLogout = async () => {
+  // Get Firebase instance from window
+  if (window.firebase && window.firebase.auth()) {
+    try {
+      await window.firebase.auth().signOut();
+      // Then call onLogout to update App state
+      if (onLogout) {
+        onLogout();
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  } else {
+    // Fallback if Firebase not available
     if (onLogout) {
       onLogout();
     }
-  };
+  }
+};
 
   const handleOpenSchedule = (machine, type) => {
     setSelectedMachine(machine);
