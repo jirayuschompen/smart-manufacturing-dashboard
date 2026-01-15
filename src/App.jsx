@@ -1266,8 +1266,11 @@ const Dashboard = ({ onLogout }) => {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-6 py-8">
         {activeTab === 'overview' && (
-          <div className="flex flex-col h-[calc(100vh-180px)] gap-4 overflow-hidden">
+          // 1. แก้ไข Container หลัก: มือถือให้สูง Auto และเลื่อนได้ (overflow-y-auto) / คอมให้ฟิกซ์ความสูง (lg:h-...)
+          <div className="flex flex-col h-auto lg:h-[calc(100vh-180px)] gap-4 overflow-y-auto lg:overflow-hidden pb-4 lg:pb-0">
+            
             {/* --- ส่วนที่ 1: KPI Cards --- */}
+            {/* เพิ่ม flex-none เพื่อไม่ให้โดนบีบ */}
             <div className="flex-none grid grid-cols-2 lg:grid-cols-4 gap-4">
               {kpiCards.map((kpi, idx) => {
                 const Icon = kpi.icon;
@@ -1286,19 +1289,19 @@ const Dashboard = ({ onLogout }) => {
                 return (
                   <div key={idx} className={`${bgColors[kpi.color]} rounded-xl p-4 flex items-center justify-between shadow-sm border border-transparent hover:border-slate-200 transition-all`}>
                     <div className="flex flex-col justify-center">
-                      <p className={`text-xs font-medium ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'} uppercase tracking-wide`}>
+                      <p className={`text-[10px] lg:text-xs font-medium ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'} uppercase tracking-wide truncate`}>
                         {kpi.title === 'Overall OEE' ? currentLang.overallOEE :
                          kpi.title === 'Forecast Accuracy' ? currentLang.forecastAccuracy :
                          kpi.title === 'Active Machines' ? currentLang.activeMachines :
                          currentLang.criticalAlerts}
                       </p>
-                      <p className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'} mt-1`}>{kpi.value}</p>
+                      <p className={`text-xl lg:text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'} mt-1`}>{kpi.value}</p>
                     </div>
                     <div className="flex flex-col items-end space-y-2">
-                      <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-slate-800' : 'bg-white'} shadow-sm`}>
-                        <Icon className={`w-5 h-5 ${iconColors[kpi.color]}`} />
+                      <div className={`p-1.5 lg:p-2 rounded-lg ${theme === 'dark' ? 'bg-slate-800' : 'bg-white'} shadow-sm`}>
+                        <Icon className={`w-4 h-4 lg:w-5 lg:h-5 ${iconColors[kpi.color]}`} />
                       </div>
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                      <span className={`text-[10px] lg:text-xs font-bold px-2 py-0.5 rounded-full ${
                         kpi.trend === 'up' ? 'bg-green-100 text-green-700' : 
                         kpi.trend === 'down' ? 'bg-red-100 text-red-700' : 
                         theme === 'dark' ? 'bg-slate-700 text-slate-300' : 'bg-slate-200 text-slate-600'
@@ -1315,28 +1318,28 @@ const Dashboard = ({ onLogout }) => {
             <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-0">
               
               {/* คอลัมน์ซ้าย: กราฟ */}
-              <div className="lg:col-span-8 flex flex-col gap-4 h-full min-h-0">
+              <div className="lg:col-span-8 flex flex-col gap-4 h-auto lg:h-full lg:min-h-0">
                 
                 {/* 1. กราฟบน: Production Efficiency (OEE) */}
-                <div className={`flex-1 ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} rounded-xl shadow-sm border p-4 flex flex-col min-h-0`}>
+                {/* แก้ไข: มือถือสูง 300px (h-[300px]) / คอมยืดเต็ม (lg:flex-1) */}
+                <div className={`h-[300px] lg:h-auto lg:flex-1 ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} rounded-xl shadow-sm border p-4 flex flex-col min-h-0`}>
                   <div className="flex justify-between items-center mb-2 flex-none">
                     <h3 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{currentLang.weeklyProduction}</h3>
-                    {/* ปุ่มเลือกช่วงเวลา Production */}
                     <div className={`flex rounded-lg border ${theme === 'dark' ? 'border-slate-600 bg-slate-700' : 'border-slate-200 bg-slate-50'} p-0.5`}>
                       {['daily', 'weekly', 'monthly', 'yearly'].map((period) => (
                         <button
                           key={period}
                           onClick={() => setProductionPeriod(period)}
-                          className={`px-3 py-1 text-[10px] font-medium rounded-md transition-all ${
+                          className={`px-2 lg:px-3 py-1 text-[10px] font-medium rounded-md transition-all ${
                             productionPeriod === period
                               ? (theme === 'dark' ? 'bg-slate-600 text-white shadow-sm' : 'bg-white text-blue-600 shadow-sm border border-slate-200')
                               : (theme === 'dark' ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-700')
                           }`}
                         >
                           {period === 'daily' ? (language === 'th' ? 'วัน' : 'Day') :
-                           period === 'weekly' ? (language === 'th' ? 'สัปดาห์' : 'Week') :
-                           period === 'monthly' ? (language === 'th' ? 'เดือน' : 'Month') :
-                           (language === 'th' ? 'ปี' : 'Year')}
+                           period === 'weekly' ? (language === 'th' ? 'สัปดาห์' : 'Wk') :
+                           period === 'monthly' ? (language === 'th' ? 'เดือน' : 'Mo') :
+                           (language === 'th' ? 'ปี' : 'Yr')}
                         </button>
                       ))}
                     </div>
@@ -1356,44 +1359,42 @@ const Dashboard = ({ onLogout }) => {
                           }}
                           cursor={{fill: theme === 'dark' ? '#334155' : '#f1f5f9', opacity: 0.4}}
                         />
-                        <Bar dataKey="oee" fill="#3b82f6" name="OEE %" radius={[4, 4, 0, 0]} barSize={productionPeriod === 'yearly' ? 60 : 40} />
+                        <Bar dataKey="oee" fill="#3b82f6" name="OEE %" radius={[4, 4, 0, 0]} barSize={productionPeriod === 'yearly' ? 40 : 20} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
                 </div>
 
-                {/* 2. กราฟล่าง: Demand Trend (วางทับจุดนี้) */}
-                <div className={`flex-1 ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} rounded-xl shadow-sm border p-4 flex flex-col min-h-0`}>
+                {/* 2. กราฟล่าง: Demand Trend */}
+                {/* แก้ไข: มือถือสูง 300px (h-[300px]) / คอมยืดเต็ม (lg:flex-1) */}
+                <div className={`h-[300px] lg:h-auto lg:flex-1 ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} rounded-xl shadow-sm border p-4 flex flex-col min-h-0`}>
                   <div className="flex justify-between items-center mb-2 flex-none">
                     <div className="flex items-center gap-4">
-                      {/* จุดสังเกต: บรรทัดนี้ครับที่ให้ค้นหา */}
                       <h3 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{currentLang.demandTrend}</h3>
                     </div>
                     
-                    {/* ส่วนปุ่มเลือกช่วงเวลา (แก้ไขสีให้ถูกต้องแล้ว) */}
                     <div className="flex items-center gap-3">
                       <div className={`flex rounded-lg border ${theme === 'dark' ? 'border-slate-600 bg-slate-700' : 'border-slate-200 bg-slate-50'} p-0.5`}>
                         {['daily', 'weekly', 'monthly', 'yearly'].map((period) => (
                           <button
                             key={period}
                             onClick={() => setDemandPeriod(period)}
-                            className={`px-3 py-1 text-[10px] font-medium rounded-md transition-all ${
+                            className={`px-2 lg:px-3 py-1 text-[10px] font-medium rounded-md transition-all ${
                               demandPeriod === period
                                 ? (theme === 'dark' ? 'bg-slate-600 text-white shadow-sm' : 'bg-white text-blue-600 shadow-sm border border-slate-200')
                                 : (theme === 'dark' ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-700')
                             }`}
                           >
                             {period === 'daily' ? (language === 'th' ? 'วัน' : 'Day') :
-                             period === 'weekly' ? (language === 'th' ? 'สัปดาห์' : 'Week') :
-                             period === 'monthly' ? (language === 'th' ? 'เดือน' : 'Month') :
-                             (language === 'th' ? 'ปี' : 'Year')}
+                             period === 'weekly' ? (language === 'th' ? 'สัปดาห์' : 'Wk') :
+                             period === 'monthly' ? (language === 'th' ? 'เดือน' : 'Mo') :
+                             (language === 'th' ? 'ปี' : 'Yr')}
                           </button>
                         ))}
                       </div>
                     </div>
                   </div>
                   
-                  {/* พื้นที่กราฟ */}
                   <div className="flex-1 w-full min-h-0">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={demandDataSets[demandPeriod]} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
@@ -1426,10 +1427,11 @@ const Dashboard = ({ onLogout }) => {
                 </div>
               </div>
 
-              {/* คอลัมน์ขวา: รายการแจ้งเตือน & เครื่องจักร (คงเดิม) */}
-              <div className="lg:col-span-4 flex flex-col gap-4 h-full min-h-0">
+              {/* คอลัมน์ขวา: รายการแจ้งเตือน & เครื่องจักร */}
+              <div className="lg:col-span-4 flex flex-col gap-4 h-auto lg:h-full lg:min-h-0">
                 {/* 1. Alerts List */}
-                <div className={`flex-1 ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} rounded-xl shadow-sm border flex flex-col min-h-0 overflow-hidden`}>
+                {/* แก้ไข: มือถือสูง 300px / คอมยืดเต็ม */}
+                <div className={`h-[300px] lg:h-auto lg:flex-1 ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} rounded-xl shadow-sm border flex flex-col min-h-0 overflow-hidden`}>
                   <div className={`p-3 border-b ${theme === 'dark' ? 'border-slate-700' : 'border-slate-100'} flex-none flex justify-between items-center bg-opacity-50`}>
                     <div className="flex items-center gap-2">
                       <div className="p-1.5 bg-red-100 rounded-md">
@@ -1446,7 +1448,7 @@ const Dashboard = ({ onLogout }) => {
                         className={`group p-3 rounded-lg border ${theme === 'dark' ? 'bg-slate-700 border-slate-600 hover:border-slate-500' : 'bg-slate-50 border-slate-100 hover:border-blue-200 hover:bg-white hover:shadow-sm'} transition-all cursor-pointer relative overflow-hidden`}
                         onClick={() => {markAsRead(alert.id); setShowAllAlerts(true);}}
                       >
-                        <div className={`absolute left-0 top-0 bottom-0 w-1 ${
+                         <div className={`absolute left-0 top-0 bottom-0 w-1 ${
                            alert.severity === 'critical' ? 'bg-red-500' : 
                            alert.severity === 'high' ? 'bg-orange-500' : 
                            alert.severity === 'medium' ? 'bg-yellow-500' : 'bg-blue-500'
@@ -1466,7 +1468,8 @@ const Dashboard = ({ onLogout }) => {
                 </div>
 
                 {/* 2. Machine Health List */}
-                <div className={`flex-1 ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} rounded-xl shadow-sm border flex flex-col min-h-0 overflow-hidden`}>
+                {/* แก้ไข: มือถือสูง 300px / คอมยืดเต็ม */}
+                <div className={`h-[300px] lg:h-auto lg:flex-1 ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} rounded-xl shadow-sm border flex flex-col min-h-0 overflow-hidden`}>
                   <div className={`p-3 border-b ${theme === 'dark' ? 'border-slate-700' : 'border-slate-100'} flex-none flex items-center gap-2`}>
                     <div className="p-1.5 bg-blue-100 rounded-md">
                       <Activity className="w-4 h-4 text-blue-600" />
