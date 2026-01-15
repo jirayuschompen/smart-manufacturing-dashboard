@@ -1,10 +1,23 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.jsx'
+import React, { useState } from 'react';
+import LoginMockup from './login';
+import Dashboard from './AppDashboard'; // แยก Dashboard ชัดเจน
 
-createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-)
+const App = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  const handleLogin = () => setIsAuthenticated(true);
+  const handleLogout = () => setIsAuthenticated(false);
+
+  return (
+    <>
+      {!isAuthenticated ? (
+        <LoginMockup onLogin={handleLogin} />
+      ) : (
+        <Dashboard onLogout={handleLogout} />
+      )}
+    </>
+  );
+};
+
+export default App;
+  
