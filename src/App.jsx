@@ -1,8 +1,66 @@
 import React, {useState} from 'react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart } from 'recharts';
 import { TrendingUp, AlertTriangle, Activity, Settings, Calendar, Package, Factory, Cpu, Bell, ChevronRight, CheckCircle, XCircle, Clock, X, User, LogOut, Shield, FileText, Loader, Check, Upload, Download } from 'lucide-react';
+import LoginMockup from './login'; // 1. IMPORT Login เข้ามา
 
-const SmartManufacturingDashboard = () => {
+const generateDailyData = () => {
+  const data = [];
+  for (let h = 0; h < 24; h++) {
+    for (let m = 0; m < 60; m += 10) {
+      const timeLabel = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+      let baseValue = 0;
+
+      // 1. กำหนด Base Value ตามช่วงเวลา (Trend หลัก)
+      if (h < 6) baseValue = 150;        
+      else if (h < 9) baseValue = 300 + ((h - 6) * 200); 
+      else if (h < 12) baseValue = 850;  
+      else if (h < 13) baseValue = 700;  
+      else if (h < 17) baseValue = 900;  
+      else if (h < 21) baseValue = 600 - ((h - 17) * 100); 
+      else baseValue = 200;              
+
+      // 2. ปรุงแต่งข้อมูล
+      // Actual: มีความแกว่งตัว (Noise) เล็กน้อยตามธรรมชาติเครื่องจักร
+      const randomNoise = (Math.random() - 0.5) * 40; 
+      const actual = Math.max(0, baseValue + randomNoise);
+
+      // Forecast: ตัดความแกว่งออก ให้เป็นเส้นเรียบๆ (Smooth Trend) 
+      // อาจจะบวกค่านิดหน่อยเพื่อให้เห็นเส้นแยกกับ Actual ชัดเจน
+      const forecast = baseValue * 1.02; 
+
+      data.push({
+        label: timeLabel,
+        actual: Math.round(actual),   // ปัดเศษให้ดูสวย
+        forecast: Math.round(forecast) // เส้นนี้จะนิ่ง เรียบร้อย
+      });
+    }
+  }
+  return data;
+};
+
+const generateHourlyOEE = () => {
+  const data = [];
+  for (let i = 0; i < 24; i++) {
+    const hour = i.toString().padStart(2, '0') + ':00';
+    let oee = 0;
+
+    // จำลองสถานการณ์จริง:
+    if (i < 6) oee = 0; // 00:00-06:00 เครื่องจักรหยุดเดิน (หรือ Low)
+    else if (i === 12) oee = 45; // พักเที่ยง ประสิทธิภาพตกลง
+    else if (i > 17 && i <= 20) oee = 75; // OT ประสิทธิภาพลดลงนิดหน่อย
+    else if (i > 20) oee = 0; // เลิกงาน
+    else oee = 85 + Math.floor(Math.random() * 10); // เวลาทำงานปกติ (85-95%)
+
+    data.push({
+      label: hour,
+      oee: oee
+    });
+  }
+  return data;
+};
+
+// 2. เปลี่ยนชื่อ Component เดิมเป็น Dashboard และรับ onLogout
+const Dashboard = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState('overview');
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -19,6 +77,8 @@ const SmartManufacturingDashboard = () => {
   const [showMachineDetail, setShowMachineDetail] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [scheduleType, setScheduleType] = useState('inspection');
+  const [productionPeriod, setProductionPeriod] = useState('daily');
+  const [demandPeriod, setDemandPeriod] = useState('monthly');
   const [scheduleForm, setScheduleForm] = useState({
     date: '',
     time: '',
@@ -29,6 +89,67 @@ const SmartManufacturingDashboard = () => {
   const [showAllAlerts, setShowAllAlerts] = useState(false);
   const [alertFilter, setAlertFilter] = useState('all');
   const [alertSearch, setAlertSearch] = useState('');
+
+  // --- แก้ไขข้อมูล Production Efficiency ตามที่คุณต้องการ ---
+  const productionDataSets = {
+    // 1. Daily: แสดงรายชั่วโมงใน 1 วัน
+    daily: generateHourlyOEE(),
+
+    // 2. Weekly: แสดงข้อมูล 7 วัน (Mon - Sun)
+    weekly: [
+      { label: 'Mon', oee: 85 },
+      { label: 'Tue', oee: 87 },
+      { label: 'Wed', oee: 82 },
+      { label: 'Thu', oee: 89 },
+      { label: 'Fri', oee: 86 },
+      { label: 'Sat', oee: 75 }, // วันเสาร์ (ครึ่งวัน/OT)
+      { label: 'Sun', oee: 0 }   // วันหยุด
+    ],
+
+    // 3. Monthly: แสดง 12 เดือน (เหมือนเดิม)
+    monthly: [
+      { label: 'Jan', oee: 80 }, { label: 'Feb', oee: 82 }, { label: 'Mar', oee: 81 },
+      { label: 'Apr', oee: 85 }, { label: 'May', oee: 86 }, { label: 'Jun', oee: 84 },
+      { label: 'Jul', oee: 87 }, { label: 'Aug', oee: 88 }, { label: 'Sep', oee: 86 },
+      { label: 'Oct', oee: 89 }, { label: 'Nov', oee: 88 }, { label: 'Dec', oee: 90 }
+    ],
+
+    // 4. Yearly: แสดง 5 ปี (เหมือนเดิม)
+    yearly: [
+      { label: '2021', oee: 78 }, { label: '2022', oee: 82 },
+      { label: '2023', oee: 85 }, { label: '2024', oee: 86 },
+      { label: '2025', oee: 88 }
+    ]
+  };
+  
+  const demandDataSets = {
+    daily: generateDailyData(), // (อันเดิมที่เป็นราย 10 นาที)
+    
+    // --- แก้ไขตรงนี้ครับ (เปลี่ยนจาก W1-W12 เป็น Mon-Sun) ---
+    weekly: [
+      { label: 'Mon', actual: 4250, forecast: 4300 },
+      { label: 'Tue', actual: 4400, forecast: 4350 },
+      { label: 'Wed', actual: 4150, forecast: 4200 },
+      { label: 'Thu', actual: 4600, forecast: 4550 },
+      { label: 'Fri', actual: 4850, forecast: 4900 },
+      { label: 'Sat', actual: 3800, forecast: 3900 }, // วันเสาร์ลดลง
+      { label: 'Sun', actual: 3500, forecast: 3600 }  // วันอาทิตย์ต่ำสุด
+    ],
+    // ----------------------------------------------------
+
+    monthly: [ // (เหมือนเดิม)
+      { label: 'Jan', actual: 850, forecast: 860 }, { label: 'Feb', actual: 920, forecast: 910 },
+      { label: 'Mar', actual: 880, forecast: 890 }, { label: 'Apr', actual: 1050, forecast: 1040 },
+      { label: 'May', actual: 1100, forecast: 1120 }, { label: 'Jun', actual: 1080, forecast: 1090 },
+      { label: 'Jul', actual: 0, forecast: 1150 }, { label: 'Aug', actual: 0, forecast: 1200 },
+      { label: 'Sep', actual: 0, forecast: 1180 }, { label: 'Oct', actual: 0, forecast: 1250 }
+    ],
+    yearly: [ // (เหมือนเดิม)
+      { label: '2021', actual: 12000, forecast: 11800 }, { label: '2022', actual: 14500, forecast: 14200 },
+      { label: '2023', actual: 16800, forecast: 17000 }, { label: '2024', actual: 18500, forecast: 18200 },
+      { label: '2025', actual: 0, forecast: 21000 }
+    ]
+  };
 
   // Translation object
   const t = {
@@ -151,7 +272,7 @@ const SmartManufacturingDashboard = () => {
       criticalAlerts: 'Critical Alerts',
       underMaintenance: 'under maintenance',
       newToday: 'new today',
-      weeklyProduction: 'Weekly Production Efficiency',
+      weeklyProduction: 'Production Efficiency',
       demandTrend: 'Demand Trend & Forecast',
       recentAlerts: 'Recent Alerts',
       machineHealth: 'Machine Health Status',
@@ -535,7 +656,10 @@ const SmartManufacturingDashboard = () => {
   };
 
   const handleLogout = () => {
-    alert('Logout functionality - Would redirect to login page');
+    // เรียกใช้ฟังก์ชัน onLogout เพื่อแจ้งให้ App รู้ว่าต้องการออกจากระบบ
+    if (onLogout) {
+      onLogout();
+    }
   };
 
   const handleOpenSchedule = (machine, type) => {
@@ -1142,9 +1266,9 @@ const SmartManufacturingDashboard = () => {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-6 py-8">
         {activeTab === 'overview' && (
-          <div className="space-y-6">
-            {/* KPI Cards - Compact Version */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="flex flex-col h-[calc(100vh-180px)] gap-4 overflow-hidden">
+            {/* --- ส่วนที่ 1: KPI Cards --- */}
+            <div className="flex-none grid grid-cols-2 lg:grid-cols-4 gap-4">
               {kpiCards.map((kpi, idx) => {
                 const Icon = kpi.icon;
                 const bgColors = {
@@ -1160,140 +1284,232 @@ const SmartManufacturingDashboard = () => {
                   red: theme === 'dark' ? 'text-red-400' : 'text-red-600'
                 };
                 return (
-                  <div key={idx} className={`${bgColors[kpi.color]} rounded-lg p-4 hover:shadow-md transition`}>
-                    <div className="flex items-center justify-between mb-2">
-                      <Icon className={`w-5 h-5 ${iconColors[kpi.color]}`} />
-                      <span className={`text-xs px-2 py-0.5 rounded ${kpi.trend === 'up' ? 'bg-green-100 text-green-700' : kpi.trend === 'down' ? 'bg-red-100 text-red-700' : theme === 'dark' ? 'bg-slate-700 text-slate-300' : 'bg-slate-200 text-slate-600'}`}>
+                  <div key={idx} className={`${bgColors[kpi.color]} rounded-xl p-4 flex items-center justify-between shadow-sm border border-transparent hover:border-slate-200 transition-all`}>
+                    <div className="flex flex-col justify-center">
+                      <p className={`text-xs font-medium ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'} uppercase tracking-wide`}>
+                        {kpi.title === 'Overall OEE' ? currentLang.overallOEE :
+                         kpi.title === 'Forecast Accuracy' ? currentLang.forecastAccuracy :
+                         kpi.title === 'Active Machines' ? currentLang.activeMachines :
+                         currentLang.criticalAlerts}
+                      </p>
+                      <p className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'} mt-1`}>{kpi.value}</p>
+                    </div>
+                    <div className="flex flex-col items-end space-y-2">
+                      <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-slate-800' : 'bg-white'} shadow-sm`}>
+                        <Icon className={`w-5 h-5 ${iconColors[kpi.color]}`} />
+                      </div>
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                        kpi.trend === 'up' ? 'bg-green-100 text-green-700' : 
+                        kpi.trend === 'down' ? 'bg-red-100 text-red-700' : 
+                        theme === 'dark' ? 'bg-slate-700 text-slate-300' : 'bg-slate-200 text-slate-600'
+                      }`}>
                         {kpi.change}
                       </span>
                     </div>
-                    <p className={`text-xs font-medium ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'} mb-1`}>
-                      {kpi.title === 'Overall OEE' ? currentLang.overallOEE :
-                       kpi.title === 'Forecast Accuracy' ? currentLang.forecastAccuracy :
-                       kpi.title === 'Active Machines' ? currentLang.activeMachines :
-                       currentLang.criticalAlerts}
-                    </p>
-                    <p className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{kpi.value}</p>
                   </div>
                 );
               })}
             </div>
 
-            {/* Charts Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Production Efficiency */}
-              <div className={`${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} rounded-xl shadow-sm border p-6`}>
-                <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-slate-800'} mb-4`}>{currentLang.weeklyProduction}</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={productionData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis dataKey="day" stroke="#64748b" />
-                    <YAxis stroke="#64748b" />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: theme === 'dark' ? '#1e293b' : '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', color: theme === 'dark' ? '#fff' : '#000' }}
-                    />
-                    <Legend />
-                    <Bar dataKey="oee" fill="#3b82f6" name="OEE %" radius={[8, 8, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-
-              {/* Demand Trend */}
-              <div className={`${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} rounded-xl shadow-sm border p-6`}>
-                <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-slate-800'} mb-4`}>{currentLang.demandTrend}</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={demandData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis dataKey="month" stroke="#64748b" />
-                    <YAxis stroke="#64748b" />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: theme === 'dark' ? '#1e293b' : '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', color: theme === 'dark' ? '#fff' : '#000' }}
-                    />
-                    <Legend />
-                    <Area type="monotone" dataKey="actual" stroke="#10b981" fill="#10b981" fillOpacity={0.6} name="Actual Demand" />
-                    <Area type="monotone" dataKey="forecast" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} name="Forecast" strokeDasharray="5 5" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-            {/* Alerts and Machine Health */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Recent Alerts */}
-              <div className={`${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} rounded-xl shadow-sm border p-6`}>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{currentLang.recentAlerts}</h3>
-                  <button 
-                    onClick={() => setShowAllAlerts(true)}
-                    className="text-sm text-blue-600 font-medium cursor-pointer hover:underline"
-                  >
-                    {currentLang.viewAll}
-                  </button>
-                </div>
-                <div className="space-y-3">
-                  {alerts.slice(0, 3).map((alert) => (
-                    <div 
-                      key={alert.id} 
-                      className={`flex items-start space-x-3 p-3 ${
-                        theme === 'dark' ? 'bg-slate-700 hover:bg-slate-650' : 'bg-slate-50 hover:bg-slate-100'
-                      } rounded-lg transition cursor-pointer`}
-                      onClick={() => {
-                        markAsRead(alert.id);
-                        setShowAllAlerts(true);
-                      }}
-                    >
-                      {getSeverityIcon(alert.severity)}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <p className={`text-sm font-medium ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{alert.machine}</p>
-                          {!alert.read && (
-                            <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                          )}
-                        </div>
-                        <p className={`text-sm ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>{alert.message}</p>
-                        <p className={`text-xs ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'} mt-1`}>{alert.time}</p>
-                      </div>
-                      <ChevronRight className={`w-5 h-5 ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`} />
+            {/* --- ส่วนที่ 2: Main Content Grid --- */}
+            <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-0">
+              
+              {/* คอลัมน์ซ้าย: กราฟ */}
+              <div className="lg:col-span-8 flex flex-col gap-4 h-full min-h-0">
+                
+                {/* 1. กราฟบน: Production Efficiency (OEE) */}
+                <div className={`flex-1 ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} rounded-xl shadow-sm border p-4 flex flex-col min-h-0`}>
+                  <div className="flex justify-between items-center mb-2 flex-none">
+                    <h3 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{currentLang.weeklyProduction}</h3>
+                    {/* ปุ่มเลือกช่วงเวลา Production */}
+                    <div className={`flex rounded-lg border ${theme === 'dark' ? 'border-slate-600 bg-slate-700' : 'border-slate-200 bg-slate-50'} p-0.5`}>
+                      {['daily', 'weekly', 'monthly', 'yearly'].map((period) => (
+                        <button
+                          key={period}
+                          onClick={() => setProductionPeriod(period)}
+                          className={`px-3 py-1 text-[10px] font-medium rounded-md transition-all ${
+                            productionPeriod === period
+                              ? (theme === 'dark' ? 'bg-slate-600 text-white shadow-sm' : 'bg-white text-blue-600 shadow-sm border border-slate-200')
+                              : (theme === 'dark' ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-700')
+                          }`}
+                        >
+                          {period === 'daily' ? (language === 'th' ? 'วัน' : 'Day') :
+                           period === 'weekly' ? (language === 'th' ? 'สัปดาห์' : 'Week') :
+                           period === 'monthly' ? (language === 'th' ? 'เดือน' : 'Month') :
+                           (language === 'th' ? 'ปี' : 'Year')}
+                        </button>
+                      ))}
                     </div>
-                  ))}
+                  </div>
+                  <div className="flex-1 w-full min-h-0">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={productionDataSets[productionPeriod]} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#334155' : '#e2e8f0'} vertical={false} />
+                        <XAxis dataKey="label" stroke="#94a3b8" tick={{fontSize: 11}} axisLine={false} tickLine={false} dy={10} />
+                        <YAxis stroke="#94a3b8" tick={{fontSize: 11}} axisLine={false} tickLine={false} domain={[0, 100]} />
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: theme === 'dark' ? '#1e293b' : '#fff', 
+                            borderColor: theme === 'dark' ? '#334155' : '#e2e8f0',
+                            borderRadius: '8px',
+                            fontSize: '12px'
+                          }}
+                          cursor={{fill: theme === 'dark' ? '#334155' : '#f1f5f9', opacity: 0.4}}
+                        />
+                        <Bar dataKey="oee" fill="#3b82f6" name="OEE %" radius={[4, 4, 0, 0]} barSize={productionPeriod === 'yearly' ? 60 : 40} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* 2. กราฟล่าง: Demand Trend (วางทับจุดนี้) */}
+                <div className={`flex-1 ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} rounded-xl shadow-sm border p-4 flex flex-col min-h-0`}>
+                  <div className="flex justify-between items-center mb-2 flex-none">
+                    <div className="flex items-center gap-4">
+                      {/* จุดสังเกต: บรรทัดนี้ครับที่ให้ค้นหา */}
+                      <h3 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{currentLang.demandTrend}</h3>
+                    </div>
+                    
+                    {/* ส่วนปุ่มเลือกช่วงเวลา (แก้ไขสีให้ถูกต้องแล้ว) */}
+                    <div className="flex items-center gap-3">
+                      <div className={`flex rounded-lg border ${theme === 'dark' ? 'border-slate-600 bg-slate-700' : 'border-slate-200 bg-slate-50'} p-0.5`}>
+                        {['daily', 'weekly', 'monthly', 'yearly'].map((period) => (
+                          <button
+                            key={period}
+                            onClick={() => setDemandPeriod(period)}
+                            className={`px-3 py-1 text-[10px] font-medium rounded-md transition-all ${
+                              demandPeriod === period
+                                ? (theme === 'dark' ? 'bg-slate-600 text-white shadow-sm' : 'bg-white text-blue-600 shadow-sm border border-slate-200')
+                                : (theme === 'dark' ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-700')
+                            }`}
+                          >
+                            {period === 'daily' ? (language === 'th' ? 'วัน' : 'Day') :
+                             period === 'weekly' ? (language === 'th' ? 'สัปดาห์' : 'Week') :
+                             period === 'monthly' ? (language === 'th' ? 'เดือน' : 'Month') :
+                             (language === 'th' ? 'ปี' : 'Year')}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* พื้นที่กราฟ */}
+                  <div className="flex-1 w-full min-h-0">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={demandDataSets[demandPeriod]} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="colorActual" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
+                            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                          </linearGradient>
+                          <linearGradient id="colorForecast" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#334155' : '#e2e8f0'} vertical={false} />
+                        <XAxis dataKey="label" stroke="#94a3b8" tick={{fontSize: 11}} axisLine={false} tickLine={false} dy={10} />
+                        <YAxis stroke="#94a3b8" tick={{fontSize: 11}} axisLine={false} tickLine={false} />
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: theme === 'dark' ? '#1e293b' : '#fff', 
+                            borderColor: theme === 'dark' ? '#334155' : '#e2e8f0',
+                            borderRadius: '8px',
+                            fontSize: '12px'
+                          }} 
+                        />
+                        <Area type="monotone" dataKey="actual" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorActual)" name="Actual" connectNulls />
+                        <Area type="monotone" dataKey="forecast" stroke="#3b82f6" strokeWidth={2} strokeDasharray="5 5" fillOpacity={1} fill="url(#colorForecast)" name="Forecast" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
               </div>
 
-              {/* Machine Health Status */}
-              <div className={`${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} rounded-xl shadow-sm border p-6`}>
-                <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-slate-800'} mb-4`}>
-                  {currentLang.machineHealth}
-                </h3>
-                <div className="space-y-3">
-                  {machineHealth.map((machine, idx) => (
-                    <div 
-                      key={idx} 
-                      className={`flex items-center justify-between p-3 ${theme === 'dark' ? 'bg-slate-700' : 'bg-slate-50'} rounded-lg cursor-pointer hover:shadow-md transition`}
-                      onClick={() => {
-                        setSelectedMachine(machine);
-                        setShowMachineDetail(true);
-                      }}
-                    >
-                      <div className="flex items-center space-x-3 flex-1">
-                        <Factory className={`w-5 h-5 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`} />
-                        <div>
-                          <p className={`text-sm font-medium ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{machine.name}</p>
-                          <p className={`text-xs ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>RUL: {machine.rul} {currentLang.days}</p>
+              {/* คอลัมน์ขวา: รายการแจ้งเตือน & เครื่องจักร (คงเดิม) */}
+              <div className="lg:col-span-4 flex flex-col gap-4 h-full min-h-0">
+                {/* 1. Alerts List */}
+                <div className={`flex-1 ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} rounded-xl shadow-sm border flex flex-col min-h-0 overflow-hidden`}>
+                  <div className={`p-3 border-b ${theme === 'dark' ? 'border-slate-700' : 'border-slate-100'} flex-none flex justify-between items-center bg-opacity-50`}>
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 bg-red-100 rounded-md">
+                        <Bell className="w-4 h-4 text-red-600" />
+                      </div>
+                      <h3 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{currentLang.recentAlerts}</h3>
+                    </div>
+                    <span className="text-xs font-medium px-2 py-0.5 bg-red-100 text-red-700 rounded-full">{unreadCount} new</span>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar">
+                    {alerts.map((alert) => (
+                      <div 
+                        key={alert.id} 
+                        className={`group p-3 rounded-lg border ${theme === 'dark' ? 'bg-slate-700 border-slate-600 hover:border-slate-500' : 'bg-slate-50 border-slate-100 hover:border-blue-200 hover:bg-white hover:shadow-sm'} transition-all cursor-pointer relative overflow-hidden`}
+                        onClick={() => {markAsRead(alert.id); setShowAllAlerts(true);}}
+                      >
+                        <div className={`absolute left-0 top-0 bottom-0 w-1 ${
+                           alert.severity === 'critical' ? 'bg-red-500' : 
+                           alert.severity === 'high' ? 'bg-orange-500' : 
+                           alert.severity === 'medium' ? 'bg-yellow-500' : 'bg-blue-500'
+                        }`}></div>
+                        <div className="pl-2">
+                          <div className="flex justify-between items-start mb-1">
+                            <span className={`text-xs font-bold ${theme === 'dark' ? 'text-slate-200' : 'text-slate-700'}`}>{alert.machine}</span>
+                            <span className="text-[10px] text-slate-400">{alert.time}</span>
+                          </div>
+                          <p className={`text-xs ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'} line-clamp-2 leading-relaxed`}>
+                            {alert.message}
+                          </p>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-3">
-                        <div className="text-right">
-                          <p className={`text-sm font-semibold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{machine.health}%</p>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 2. Machine Health List */}
+                <div className={`flex-1 ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} rounded-xl shadow-sm border flex flex-col min-h-0 overflow-hidden`}>
+                  <div className={`p-3 border-b ${theme === 'dark' ? 'border-slate-700' : 'border-slate-100'} flex-none flex items-center gap-2`}>
+                    <div className="p-1.5 bg-blue-100 rounded-md">
+                      <Activity className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <h3 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{currentLang.machineHealth}</h3>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar">
+                    {machineHealth.map((machine, idx) => (
+                      <div 
+                        key={idx} 
+                        className={`flex items-center justify-between p-3 rounded-lg border ${theme === 'dark' ? 'bg-slate-700 border-slate-600 hover:bg-slate-600' : 'bg-slate-50 border-slate-100 hover:bg-white hover:shadow-sm hover:border-blue-200'} transition cursor-pointer`}
+                        onClick={() => {setSelectedMachine(machine); setShowMachineDetail(true);}}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="relative w-8 h-8 flex-none flex items-center justify-center">
+                            <svg className="w-full h-full transform -rotate-90">
+                              <circle cx="16" cy="16" r="14" stroke="currentColor" strokeWidth="3" fill="transparent" className={`${theme === 'dark' ? 'text-slate-600' : 'text-slate-200'}`} />
+                              <circle cx="16" cy="16" r="14" stroke="currentColor" strokeWidth="3" fill="transparent" 
+                                strokeDasharray={88} 
+                                strokeDashoffset={88 - (88 * machine.health) / 100}
+                                className={`${machine.health >= 80 ? 'text-green-500' : machine.health >= 60 ? 'text-yellow-500' : 'text-red-500'}`} 
+                              />
+                            </svg>
+                            <span className="absolute text-[8px] font-bold">{machine.health}</span>
+                          </div>
+                          <div className="min-w-0">
+                            <p className={`text-xs font-bold ${theme === 'dark' ? 'text-slate-200' : 'text-slate-700'} truncate`}>{machine.name}</p>
+                            <p className="text-[10px] text-slate-400">RUL: {machine.rul} days</p>
+                          </div>
                         </div>
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(machine.status)}`}>
-                          {machine.status === 'critical' ? currentLang.critical :
-                           machine.status === 'warning' ? currentLang.warning : currentLang.good}
+                        <span className={`px-2 py-1 rounded-md text-[10px] font-bold border ${
+                          machine.status === 'critical' ? 'bg-red-50 text-red-600 border-red-100' : 
+                          machine.status === 'warning' ? 'bg-yellow-50 text-yellow-600 border-yellow-100' : 
+                          'bg-green-50 text-green-600 border-green-100'
+                        }`}>
+                          {machine.status === 'critical' ? 'CRIT' : machine.status === 'warning' ? 'WARN' : 'GOOD'}
                         </span>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
+
             </div>
           </div>
         )}
@@ -2243,4 +2459,17 @@ const SmartManufacturingDashboard = () => {
   );
 };
 
-export default SmartManufacturingDashboard;
+// 3. สร้าง App Component ตัวหลักสำหรับควบคุมการสลับหน้า
+const App = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // ถ้ายังไม่ล็อกอิน -> แสดงหน้า Login
+  if (!isAuthenticated) {
+    return <LoginMockup onLogin={() => setIsAuthenticated(true)} />;
+  }
+
+  // ถ้าล็อกอินแล้ว -> แสดงหน้า Dashboard
+  return <Dashboard onLogout={() => setIsAuthenticated(false)} />;
+};
+
+export default App;
