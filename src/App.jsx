@@ -1293,20 +1293,19 @@ const Dashboard = ({ onLogout }) => {
                 {currentLang.cancel}
               </button>
               
-              {/* ปุ่ม Confirm: เปลี่ยนสีตามสถานะ Disabled/Enabled */}
+              {/* ปุ่ม Confirm Schedule พร้อม Logic การ Disable */}
               <button 
                 onClick={handleScheduleSubmit} 
-                disabled={!scheduleForm.technician || !scheduleForm.time}
+                disabled={!scheduleForm.technician || !scheduleForm.time} // เงื่อนไข: ต้องมี Technician และ Time
                 className={`px-6 py-2 rounded-lg text-sm font-medium shadow-md transition-all ${
                   !scheduleForm.technician || !scheduleForm.time
-                    ? 'opacity-70 cursor-not-allowed' // สถานะ Disabled
-                    : 'hover:shadow-lg hover:-translate-y-0.5' // สถานะ Enabled
+                    ? 'opacity-50 cursor-not-allowed' // สไตล์เมื่อ Disabled
+                    : 'hover:shadow-lg hover:-translate-y-0.5' // สไตล์เมื่อ Enabled
                 } ${
-                   // Logic การเลือกสี: ถ้ายังไม่ครบเป็นสีเทา / ถ้าครบแล้วเป็นสีน้ำเงิน
-                   !scheduleForm.technician || !scheduleForm.time
-                      ? (theme === 'dark' ? 'bg-slate-700 text-slate-500' : 'bg-[#b4c4d6] text-[#475569]')
-                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                   theme === 'dark' ? 'bg-slate-600 text-white' : ''
                 }`}
+                // ใช้ style ใน Light Mode ตามเดิม (แต่ถ้า Disabled จะจางลงด้วย opacity)
+                style={theme === 'dark' ? {} : { backgroundColor: '#b4c4d6', color: '#475569' }}
               >
                 {currentLang.confirmSchedule}
               </button>
