@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import React, {useState} from 'react';
 import { TrendingUp, AlertTriangle, Activity, Settings, Calendar, Package, Factory, Cpu, 
   Bell, ChevronRight, CheckCircle, XCircle, Clock, X, User, LogOut, Shield, 
@@ -572,6 +573,7 @@ const Dashboard = ({ onLogout }) => {
     setTimeout(() => setShowSuccessMessage(false), 3000);
   };
 
+  // eslint-disable-next-line no-unused-vars
   const deleteAllAlerts = () => {
     if (confirm(language === 'th' ? 'ต้องการลบการแจ้งเตือนทั้งหมดหรือไม่?' : 'Delete all alerts?')) {
       setAlerts([]);
