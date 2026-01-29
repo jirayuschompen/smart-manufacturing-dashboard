@@ -47,8 +47,8 @@ const generateDailyData = () => {
 // ฟังก์ชันเวลาของ Production Efficiency รายชม.
 const generateHourlyOEE = () => {
   const data = [];
-  // แก้ไขลูปให้เริ่มที่ 7 (07:00) และจบที่ 16 (16:00)
-  for (let i = 7; i <= 16; i++) {
+  // แก้ไขลูปให้เริ่มที่ (06:00) และจบที่ (17:00)
+  for (let i = 6; i <= 17; i++) {
     const hour = i.toString().padStart(2, '0') + ':00';
     let oee = 0;
 
@@ -1142,7 +1142,6 @@ const Dashboard = ({ onLogout }) => {
       )}
 
       {/* Analysis Modal */}
-      {/* Analysis Modal (Updated UI) */}
       {showAnalysisModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-in fade-in duration-200">
           <div className={`${theme === 'dark' ? 'bg-[#1e293b]' : 'bg-white'} rounded-xl w-full shadow-2xl overflow-hidden`} style={{ maxWidth: '650px' }}>
@@ -1167,6 +1166,7 @@ const Dashboard = ({ onLogout }) => {
               <div>
                 <label className={`block text-sm font-semibold mb-3 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>Analysis Type</label>
                 <div className="space-y-3">
+                  
                   {/* Option 1 */}
                   <label className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${
                     analysisParams.type === 'full' 
@@ -1779,7 +1779,6 @@ const Dashboard = ({ onLogout }) => {
                   </div>
                 </div>
               </div>
-
             </div>
 
             {/* 3. Footer Actions */}

@@ -140,6 +140,7 @@ const Overview = ({
             purple: theme === 'dark' ? 'text-purple-400' : 'text-purple-600',
             red: theme === 'dark' ? 'text-red-400' : 'text-red-600'
           };
+
           return (
             <div key={idx} className={`${bgColors[kpi.color]} border rounded-xl p-3 shadow-sm flex flex-col justify-between h-full min-h-[100px] lg:min-h-0 lg:h-auto transition-transform active:scale-95 lg:hover:scale-[1.02]`}>
               <div className="flex justify-between items-start mb-1 lg:mb-2">
@@ -197,12 +198,27 @@ const Overview = ({
                   <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#46566d' : '#e2e8f0' } vertical={false} />
                   <XAxis dataKey="label" stroke="#94a3b8" tick={{fontSize: 10}} axisLine={false} tickLine={false} dy={10} />
                   <YAxis stroke="#94a3b8" tick={{fontSize: 10}} axisLine={false} tickLine={false} domain={[0, 100]} />
-                  <Tooltip contentStyle={{ backgroundColor: theme === 'dark' ? '#1e293b' : '#fff', borderColor: theme === 'dark' ? '#334155' : '#e2e8f0', borderRadius: '8px', fontSize: '12px' }} cursor={{fill: theme === 'dark' ? '#334155' : '#f1f5f9', opacity: 0.4}} />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: theme === 'dark' ? '#1e293b' : '#fff', 
+                      borderColor: theme === 'dark' ? '#334155' : '#e2e8f0', 
+                      borderRadius: '8px', 
+                      fontSize: '12px' 
+                    }}
+                    
+                    labelStyle={{
+                      color: theme === 'dark' ? '#ffffff' : '#1e293b', // สีขาวใน Dark Mode
+                      fontWeight: 'bold',
+                      marginBottom: '4px'
+                    }}
+                    
+                    cursor={{fill: theme === 'dark' ? '#334155' : '#f1f5f9', opacity: 0.4}} 
+                  />
                   
                   {/* แก้ไขตรงนี้: เพิ่มเงื่อนไข productionPeriod === 'daily' ให้กว้างขึ้น (เช่น 50) */}
                   <Bar 
                     dataKey="oee" 
-                    fill="#3b82f6" 
+                    fill="#4093ff" 
                     name="OEE %" 
                     radius={[4, 4, 0, 0]} 
                     barSize={
@@ -212,6 +228,7 @@ const Overview = ({
                   />
 
                 </BarChart>
+
               </ResponsiveContainer>
             </div>
           </div>
@@ -244,7 +261,13 @@ const Overview = ({
                   <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#334155' : '#e2e8f0'} vertical={false} />
                   <XAxis dataKey="label" stroke="#94a3b8" tick={{fontSize: 10}} axisLine={false} tickLine={false} dy={10} />
                   <YAxis stroke="#94a3b8" tick={{fontSize: 10}} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={{ backgroundColor: theme === 'dark' ? '#1e293b' : '#fff', borderColor: theme === 'dark' ? '#334155' : '#e2e8f0', borderRadius: '8px', fontSize: '12px' }} />
+                  <Tooltip contentStyle={{ backgroundColor: theme === 'dark' ? '#1e293b' : '#fff', borderColor: theme === 'dark' ? '#334155' : '#e2e8f0', borderRadius: '8px', fontSize: '12px' }} 
+                
+                  labelStyle={{
+                      color: theme === 'dark' ? '#ffffff' : '#1e293b', // สีขาวใน Dark Mode
+                      fontWeight: 'bold',
+                      marginBottom: '4px'
+                    }} />
                   
                   {/* --- ส่วนที่เพิ่ม: Upper Bound --- */}
                   <Area 
@@ -286,7 +309,8 @@ const Overview = ({
         <div className="lg:col-span-4 flex flex-col gap-4 h-auto lg:h-full lg:min-h-0">
           
           {/* Alerts List */}
-          <div className={`h-[300px] lg:h-auto lg:flex-1 ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} rounded-xl shadow-sm border flex flex-col min-h-0 overflow-hidden`}>
+          <div className={`h-[240px] lg:h-auto lg:flex-1 ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} rounded-xl shadow-sm border flex flex-col min-h-0 overflow-hidden`}>
+            {/* ส่วน Header */}
             <div className={`p-3 border-b ${theme === 'dark' ? 'border-slate-700' : 'border-slate-100'} flex-none flex justify-between items-center bg-opacity-50`}>
               <div className="flex items-center gap-2">
                 <div className="p-1.5 bg-red-100 rounded-md">
@@ -304,8 +328,13 @@ const Overview = ({
                 </button>
               </div>
             </div>
+
+            {/* ส่วนรายการ (List Body) */}
             <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar">
-              {alerts.slice(0, 5).map((alert) => (
+              
+              {/* แก้ไขตรงนี้: ลบ .slice(0, 3) ออก และใช้ .map กับ alerts โดยตรง */}
+              {alerts.map((alert) => (
+                
                 <div key={alert.id} onClick={() => {markAsRead(alert.id); setShowAllAlerts(true);}} className={`group p-2 rounded-lg border ${theme === 'dark' ? 'bg-slate-700 border-slate-600 hover:border-slate-500' : 'bg-slate-50 border-slate-100 hover:border-blue-200 hover:bg-white hover:shadow-sm'} transition-all cursor-pointer relative overflow-hidden`}>
                     <div className={`absolute left-0 top-0 bottom-0 w-1 ${alert.severity === 'critical' ? 'bg-red-500' : alert.severity === 'high' ? 'bg-orange-500' : alert.severity === 'medium' ? 'bg-yellow-500' : 'bg-blue-500'}`}></div>
                   <div className="pl-2">
@@ -514,7 +543,7 @@ const Overview = ({
                   className={`px-4 py-2 rounded-lg text-sm font-medium border transition ${
                     theme === 'dark' ? 'border-slate-600 text-slate-300 hover:bg-slate-700' : 'border-slate-300 text-slate-700 hover:bg-white shadow-sm'
                   }`}
-                >
+                  >
                   {currentLang.close}
                 </button>
               </div>
@@ -523,6 +552,7 @@ const Overview = ({
           )}
 
         </div>
+
       </div>
     </div>
   );
