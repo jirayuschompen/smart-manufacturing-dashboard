@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import React, {useState} from 'react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart } from 'recharts';
 import { TrendingUp, AlertTriangle, Activity, Settings, Calendar, Package, Factory, Cpu, Bell, ChevronRight, CheckCircle, XCircle, Clock, X, User, LogOut, Shield, FileText, Loader, Check, Upload, Download, Cloud, Wind, Droplets, Gauge } from 'lucide-react';
@@ -534,6 +535,7 @@ const Dashboard = ({ onLogout }) => {
     setTimeout(() => setShowSuccessMessage(false), 3000);
   };
 
+  // eslint-disable-next-line no-unused-vars
   const deleteAllAlerts = () => {
     if (confirm(language === 'th' ? 'ต้องการลบการแจ้งเตือนทั้งหมดหรือไม่?' : 'Delete all alerts?')) {
       setAlerts([]);
