@@ -1,10 +1,16 @@
 /* eslint-disable no-unused-vars */
 import React, {useState} from 'react';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart } from 'recharts';
-import { TrendingUp, AlertTriangle, Activity, Settings, Calendar, Package, Factory, Cpu, Bell, ChevronRight, CheckCircle, XCircle, Clock, X, User, LogOut, Shield, FileText, Loader, Check, Upload, Download, Cloud, Wind, Droplets, Gauge } from 'lucide-react';
-import LoginMockup from './login'; 
+import { TrendingUp, AlertTriangle, Activity, Settings, Calendar, Package, Factory, Cpu, 
+  Bell, ChevronRight, CheckCircle, XCircle, Clock, X, User, LogOut, Shield, 
+  FileText, Loader, Check, Upload, Download, Cloud, Wind, Droplets, Gauge, 
+  Search, Info } from 'lucide-react';
+import Overview from './Overviewpage';
+import Forecast from './Forecastpage';
+import Planning from './Planningpage';
+import Maintenance from './Maintenancepage';
+import LoginMockup from './login';
 
-// --- Helper Functions ---
+// 1. ค้นหาฟังก์ชัน generateDailyData แล้ววางทับด้วยอันนี้
 const generateDailyData = () => {
   const data = [];
   for (let h = 0; h < 24; h++) {
@@ -18,13 +24,21 @@ const generateDailyData = () => {
       else if (h < 17) baseValue = 900;  
       else if (h < 21) baseValue = 600 - ((h - 17) * 100); 
       else baseValue = 200;              
+      
       const randomNoise = (Math.random() - 0.5) * 40; 
       const actual = Math.max(0, baseValue + randomNoise);
       const forecast = baseValue * 1.02; 
+      
+      // เพิ่มข้อมูล Upper และ Lower สำหรับกราฟรายวัน
+      const upper = forecast * 1.15;
+      const lower = forecast * 0.85;
+
       data.push({
         label: timeLabel,
         actual: Math.round(actual),
-        forecast: Math.round(forecast)
+        forecast: Math.round(forecast),
+        upper: Math.round(upper),
+        lower: Math.round(lower)
       });
     }
   }
@@ -66,7 +80,6 @@ const Dashboard = ({ onLogout }) => {
   const [scheduleType, setScheduleType] = useState('inspection');
   const [productionPeriod, setProductionPeriod] = useState('daily');
   const [demandPeriod, setDemandPeriod] = useState('monthly');
-  const [isGenerating, setIsGenerating] = useState(false);
   const [scheduleForm, setScheduleForm] = useState({
     date: '',
     time: '',
@@ -78,7 +91,7 @@ const Dashboard = ({ onLogout }) => {
   const [alertFilter, setAlertFilter] = useState('all');
   const [alertSearch, setAlertSearch] = useState('');
 
-  // --- 1. เพิ่ม Weather Data (ที่หายไป) ---
+  // --- Weather Data ---
   const weatherData = {
     temp: 32.5,
     condition: 'Partly Cloudy',
@@ -106,25 +119,36 @@ const Dashboard = ({ onLogout }) => {
     ]
   };
   
+  // 2. ค้นหาตัวแปร demandDataSets (ใน Dashboard component) แล้ววางทับด้วยอันนี้
   const demandDataSets = {
     daily: generateDailyData(),
     weekly: [
-      { label: 'Mon', actual: 4250, forecast: 4300 }, { label: 'Tue', actual: 4400, forecast: 4350 },
-      { label: 'Wed', actual: 4150, forecast: 4200 }, { label: 'Thu', actual: 4600, forecast: 4550 },
-      { label: 'Fri', actual: 4850, forecast: 4900 }, { label: 'Sat', actual: 3800, forecast: 3900 },
-      { label: 'Sun', actual: 3500, forecast: 3600 }
+      { label: 'Mon', actual: 4250, forecast: 4300, upper: 4600, lower: 4000 },
+      { label: 'Tue', actual: 4400, forecast: 4350, upper: 4650, lower: 4050 },
+      { label: 'Wed', actual: 4150, forecast: 4200, upper: 4500, lower: 3900 },
+      { label: 'Thu', actual: 4600, forecast: 4550, upper: 4900, lower: 4200 },
+      { label: 'Fri', actual: 4850, forecast: 4900, upper: 5300, lower: 4500 },
+      { label: 'Sat', actual: 3800, forecast: 3900, upper: 4200, lower: 3600 },
+      { label: 'Sun', actual: 3500, forecast: 3600, upper: 3900, lower: 3300 }
     ],
     monthly: [
-      { label: 'Jan', actual: 850, forecast: 860 }, { label: 'Feb', actual: 920, forecast: 910 },
-      { label: 'Mar', actual: 880, forecast: 890 }, { label: 'Apr', actual: 1050, forecast: 1040 },
-      { label: 'May', actual: 1100, forecast: 1120 }, { label: 'Jun', actual: 1080, forecast: 1090 },
-      { label: 'Jul', actual: 0, forecast: 1150 }, { label: 'Aug', actual: 0, forecast: 1200 },
-      { label: 'Sep', actual: 0, forecast: 1180 }, { label: 'Oct', actual: 0, forecast: 1250 }
+      { label: 'Jan', actual: 850, forecast: 860, upper: 950, lower: 780 },
+      { label: 'Feb', actual: 920, forecast: 910, upper: 1000, lower: 820 },
+      { label: 'Mar', actual: 880, forecast: 890, upper: 980, lower: 800 },
+      { label: 'Apr', actual: 1050, forecast: 1040, upper: 1150, lower: 950 },
+      { label: 'May', actual: 1100, forecast: 1120, upper: 1250, lower: 1000 },
+      { label: 'Jun', actual: 1080, forecast: 1090, upper: 1200, lower: 980 },
+      { label: 'Jul', actual: 0, forecast: 1150, upper: 1300, lower: 1000 },
+      { label: 'Aug', actual: 0, forecast: 1200, upper: 1350, lower: 1050 },
+      { label: 'Sep', actual: 0, forecast: 1180, upper: 1320, lower: 1020 },
+      { label: 'Oct', actual: 0, forecast: 1250, upper: 1400, lower: 1100 }
     ],
     yearly: [
-      { label: '2021', actual: 12000, forecast: 11800 }, { label: '2022', actual: 14500, forecast: 14200 },
-      { label: '2023', actual: 16800, forecast: 17000 }, { label: '2024', actual: 18500, forecast: 18200 },
-      { label: '2025', actual: 0, forecast: 21000 }
+      { label: '2021', actual: 12000, forecast: 11800, upper: 13000, lower: 10500 },
+      { label: '2022', actual: 14500, forecast: 14200, upper: 15500, lower: 13000 },
+      { label: '2023', actual: 16800, forecast: 17000, upper: 18500, lower: 15500 },
+      { label: '2024', actual: 18500, forecast: 18200, upper: 20000, lower: 16500 },
+      { label: '2025', actual: 0, forecast: 21000, upper: 23500, lower: 19000 }
     ]
   };
 
@@ -500,15 +524,6 @@ const Dashboard = ({ onLogout }) => {
 
   const unreadCount = alerts.filter(a => !a.read).length;
 
-  const getStatusColor = (status) => {
-    switch(status) {
-      case 'good': return 'bg-green-100 text-green-800';
-      case 'warning': return 'bg-yellow-100 text-yellow-800';
-      case 'critical': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
   const getSeverityIcon = (severity) => {
     switch(severity) {
       case 'critical': return <AlertTriangle className="w-5 h-5 text-red-500" />;
@@ -777,787 +792,76 @@ const Dashboard = ({ onLogout }) => {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-6 py-8">
-
+        
+        {/* --- ส่วน overview --- */}
         {activeTab === 'overview' && (
-          // Container หลัก: ปรับความสูงให้พอดีหน้าจอ Desktop (h-[calc(100vh-160px)])
-          <div className="flex flex-col h-auto lg:h-[calc(100vh-160px)] gap-3 lg:gap-4 overflow-y-auto lg:overflow-hidden pb-20 lg:pb-0 scrollbar-hide">
-            <div className={`rounded-2xl p-5 border shadow-lg transition-all duration-300 ${
-              theme === 'dark' 
-                ? 'bg-[#111827] border-slate-800 text-white' // Dark Mode: ธีมมืด ดุดัน
-                : 'bg-gradient-to-r from-blue-600 to-blue-500 border-blue-400 text-white' // Light Mode: ธีมฟ้า สดใส (Blue Theme)
-            }`}>
-              
-              <div className="flex flex-col lg:flex-row items-center gap-6 lg:gap-0">
-                
-                {/* --- ส่วนที่ 1: Main Info (ซ้าย) --- */}
-                <div className="flex items-center gap-5 min-w-max lg:pr-8">
-                  {/* Icon Box */}
-                  <div className={`p-3.5 rounded-2xl shadow-sm backdrop-blur-md ${
-                    theme === 'dark' 
-                      ? 'bg-slate-800 text-blue-400' // Dark: พื้นเทา ไอคอนฟ้า
-                      : 'bg-white/20 text-white'      // Light: พื้นขาวโปร่งแสง ไอคอนขาว
-                  }`}>
-                    <Cloud className="w-9 h-9 lg:w-10 lg:h-10 drop-shadow-md" />
-                  </div>
-                  
-                  {/* Text Info */}
-                  <div>
-                    <h3 className={`text-[10px] font-bold uppercase tracking-wider mb-1 ${
-                      theme === 'dark' ? 'text-slate-400' : 'text-blue-100' // Light: หัวข้อสีฟ้าอ่อน
-                    }`}>
-                      {currentLang.overview === 'Overview' ? 'Site Conditions' : 'สภาพอากาศหน้างาน'}
-                    </h3>
-                    <div className="flex items-baseline gap-2.5">
-                      <span className="text-4xl font-bold tracking-tighter leading-none text-white">
-                        {weatherData.temp}°
-                      </span>
-                      <span className={`text-base font-medium ${
-                        theme === 'dark' ? 'text-slate-400' : 'text-blue-50' // Light: ข้อความรองสีฟ้าจางๆ เกือบขาว
-                      }`}>
-                        {weatherData.condition}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* --- เส้นคั่น (Divider) --- */}
-                <div className={`hidden lg:block w-px h-12 mx-auto ${
-                  theme === 'dark' ? 'bg-slate-700' : 'bg-white/20' // Light: เส้นคั่นสีขาวจางๆ
-                }`}></div>
-
-                {/* --- ส่วนที่ 2: Stats Grid (ขวา) --- */}
-                <div className="w-full grid grid-cols-3 gap-y-6 gap-x-2 lg:grid-cols-6 lg:gap-x-4 lg:pl-8">
-                  {[
-                    { label: 'Wind', val: `${weatherData.windSpeed} km/h`, icon: Wind },
-                    { label: 'Humidity', val: `${weatherData.humidity}%`, icon: Droplets },
-                    { label: 'Pressure', val: `${weatherData.pressure} hPa`, icon: Gauge },
-                    { label: 'Light', val: '850 W/m²', icon: null, char: '☀️' },
-                    { label: 'PM 2.5', val: '12 µg', icon: null, char: 'PM', highlight: true },
-                    { label: 'AQI', val: 'Good', icon: null, char: '🍃', highlight: true },
-                  ].map((item, i) => (
-                    <div key={i} className="flex flex-col lg:flex-row items-center lg:justify-start lg:gap-3 text-center lg:text-left">
-                      
-                      {/* Icon/Symbol */}
-                      <div className={`mb-1.5 lg:mb-0 transition-colors ${
-                        theme === 'dark' ? 'text-slate-500' : 'text-blue-100' // Light: ไอคอนสีฟ้าอ่อน
-                      }`}>
-                        {item.icon ? (
-                          <item.icon className="w-5 h-5 drop-shadow-sm" />
-                        ) : (
-                          <div className={`flex items-center justify-center w-5 h-5 font-bold rounded ${
-                            item.label === 'PM 2.5' ? 'text-[9px] border border-current px-0.5' : 'text-sm'
-                          }`}>
-                            {item.char}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Data */}
-                      <div>
-                        <p className={`text-[10px] font-bold uppercase tracking-wide mb-0.5 ${
-                          theme === 'dark' ? 'text-slate-500' : 'text-blue-200' // Light: Label สีฟ้าเข้มขึ้นมานิดนึงให้อ่านง่าย
-                        }`}>
-                          {item.label}
-                        </p>
-                        <p className={`text-sm font-bold whitespace-nowrap ${
-                          item.highlight 
-                            ? 'text-green-300' // Highlight: สีเขียวสว่าง (เข้ากับพื้นฟ้าได้ดี)
-                            : 'text-white'     // Value: สีขาวล้วนเพื่อความชัด
-                        }`}>
-                          {item.val}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-              </div>
-            </div>
-
-            {/* --- KPI Cards --- */}
-            {/* ปรับ gap-3 ให้ชิดกันมากขึ้นทั้ง Mobile และ Desktop */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              {kpiCards.map((kpi, idx) => {
-                const Icon = kpi.icon;
-                
-                // Theme colors
-                const bgColors = {
-                  blue: theme === 'dark' ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-100',
-                  green: theme === 'dark' ? 'bg-green-900/20 border-green-800' : 'bg-green-50 border-green-100',
-                  purple: theme === 'dark' ? 'bg-purple-900/20 border-purple-800' : 'bg-purple-50 border-purple-100',
-                  red: theme === 'dark' ? 'bg-red-900/20 border-red-800' : 'bg-red-50 border-red-100'
-                };
-                
-                // Icon colors
-                const iconColors = {
-                  blue: theme === 'dark' ? 'text-blue-400' : 'text-blue-600',
-                  green: theme === 'dark' ? 'text-green-400' : 'text-green-600',
-                  purple: theme === 'dark' ? 'text-purple-400' : 'text-purple-600',
-                  red: theme === 'dark' ? 'text-red-400' : 'text-red-600'
-                };
-
-                return (
-                  <div 
-                    key={idx} 
-                    // ปรับ p-3 (ลดจาก 4) และ lg:h-auto เพื่อให้ Desktop ไม่ยืดสูงเกินไป
-                    className={`${bgColors[kpi.color]} border rounded-xl p-3 shadow-sm flex flex-col justify-between h-full min-h-[100px] lg:min-h-0 lg:h-auto transition-transform active:scale-95 lg:hover:scale-[1.02]`}
-                  >
-                    {/* --- ส่วนหัว: Icon & Badge --- */}
-                    <div className="flex justify-between items-start mb-1 lg:mb-2">
-                      {/* Icon: ลดขนาด Box ลงนิดนึง */}
-                      <div className={`p-1.5 rounded-lg ${theme === 'dark' ? 'bg-slate-800/50' : 'bg-white/80'} shadow-sm`}>
-                        <Icon className={`w-4 h-4 ${iconColors[kpi.color]}`} />
-                      </div>
-
-                      {/* Trend Badge: ปรับขนาดให้เล็กกระชับ */}
-                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5 ${
-                        kpi.trend === 'up' ? 'bg-green-100 text-green-700' : 
-                        kpi.trend === 'down' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'
-                      }`}>
-                        {kpi.change}
-                      </span>
-                    </div>
-
-                    {/* --- ส่วนเนื้อหา: Title & Value --- */}
-                    <div>
-                      {/* Title: ลด margin-bottom ให้ชิดตัวเลขมากขึ้น */}
-                      <p className={`text-[10px] lg:text-[11px] font-semibold uppercase tracking-wide opacity-70 mb-0.5 truncate ${
-                        theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
-                      }`}>
-                        {kpi.title === 'Overall OEE' ? currentLang.overallOEE :
-                        kpi.title === 'Forecast Accuracy' ? currentLang.forecastAccuracy :
-                        kpi.title === 'Active Machines' ? currentLang.activeMachines :
-                        currentLang.criticalAlerts}
-                      </p>
-                      {/* Value: ปรับขนาดตัวอักษรให้พอดี ไม่ใหญ่เทอะทะ */}
-                      <p className={`text-xl lg:text-2xl font-bold leading-none ${
-                        theme === 'dark' ? 'text-white' : 'text-slate-800'
-                      }`}>
-                        {kpi.value}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* --- Main Content Grid --- */}
-            <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-0">
-              
-              {/* Left Column: Charts */}
-              <div className="lg:col-span-8 flex flex-col gap-4 h-auto lg:h-full lg:min-h-0">
-                
-                {/* 1. Production Chart */}
-                <div className={`h-[300px] lg:h-auto lg:flex-1 ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} rounded-xl shadow-sm border p-4 flex flex-col min-h-0`}>
-                  <div className="flex justify-between items-center mb-2 flex-none">
-                    <h3 className={`font-semibold text-sm ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{currentLang.weeklyProduction}</h3>
-                    <div className={`flex rounded-lg border ${theme === 'dark' ? 'border-slate-600 bg-slate-700' : 'border-slate-200 bg-slate-50'} p-0.5`}>
-                      {['daily', 'weekly', 'monthly', 'yearly'].map((period) => (
-                        <button
-                          key={period}
-                          onClick={() => setProductionPeriod(period)}
-                          className={`px-2 py-0.5 text-[10px] font-medium rounded-md transition-all ${
-                            productionPeriod === period
-                              ? (theme === 'dark' ? 'bg-slate-600 text-white shadow-sm' : 'bg-white text-blue-600 shadow-sm border border-slate-200')
-                              : (theme === 'dark' ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-700')
-                          }`}
-                        >
-                           {/* แก้ไขปุ่มตรงนี้เป็น Day, Week, Month, Year */}
-                           {period === 'daily' ? 'Day' :
-                           period === 'weekly' ? 'Week' :
-                           period === 'monthly' ? 'Month' :
-                           'Year'}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="flex-1 w-full min-h-0">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={productionDataSets[productionPeriod]} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#334155' : '#e2e8f0'} vertical={false} />
-                        <XAxis dataKey="label" stroke="#94a3b8" tick={{fontSize: 10}} axisLine={false} tickLine={false} dy={10} />
-                        <YAxis stroke="#94a3b8" tick={{fontSize: 10}} axisLine={false} tickLine={false} domain={[0, 100]} />
-                        <Tooltip contentStyle={{ backgroundColor: theme === 'dark' ? '#1e293b' : '#fff', borderColor: theme === 'dark' ? '#334155' : '#e2e8f0', borderRadius: '8px', fontSize: '12px' }} cursor={{fill: theme === 'dark' ? '#334155' : '#f1f5f9', opacity: 0.4}} />
-                        <Bar dataKey="oee" fill="#3b82f6" name="OEE %" radius={[4, 4, 0, 0]} barSize={productionPeriod === 'yearly' ? 40 : 20} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-
-                {/* 2. Demand Chart */}
-                <div className={`h-[300px] lg:h-auto lg:flex-1 ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} rounded-xl shadow-sm border p-4 flex flex-col min-h-0`}>
-                  <div className="flex justify-between items-center mb-2 flex-none">
-                    <h3 className={`font-semibold text-sm ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{currentLang.demandTrend}</h3>
-                    <div className={`flex rounded-lg border ${theme === 'dark' ? 'border-slate-600 bg-slate-700' : 'border-slate-200 bg-slate-50'} p-0.5`}>
-                        {['daily', 'weekly', 'monthly', 'yearly'].map((period) => (
-                          <button
-                            key={period}
-                            onClick={() => setDemandPeriod(period)}
-                            className={`px-2 py-0.5 text-[10px] font-medium rounded-md transition-all ${
-                              demandPeriod === period
-                                ? (theme === 'dark' ? 'bg-slate-600 text-white shadow-sm' : 'bg-white text-blue-600 shadow-sm border border-slate-200')
-                                : (theme === 'dark' ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-700')
-                            }`}
-                          >
-                           {/* แก้ไขปุ่มตรงนี้เป็น Day, Week, Month, Year */}
-                           {period === 'daily' ? 'Day' :
-                           period === 'weekly' ? 'Week' :
-                           period === 'monthly' ? 'Month' :
-                           'Year'}
-                          </button>
-                        ))}
-                    </div>
-                  </div>
-                  <div className="flex-1 w-full min-h-0">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={demandDataSets[demandPeriod]} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="colorActual" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
-                            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                          </linearGradient>
-                          <linearGradient id="colorForecast" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
-                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#334155' : '#e2e8f0'} vertical={false} />
-                        <XAxis dataKey="label" stroke="#94a3b8" tick={{fontSize: 10}} axisLine={false} tickLine={false} dy={10} />
-                        <YAxis stroke="#94a3b8" tick={{fontSize: 10}} axisLine={false} tickLine={false} />
-                        <Tooltip contentStyle={{ backgroundColor: theme === 'dark' ? '#1e293b' : '#fff', borderColor: theme === 'dark' ? '#334155' : '#e2e8f0', borderRadius: '8px', fontSize: '12px' }} />
-                        <Area type="monotone" dataKey="actual" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorActual)" name="Actual" connectNulls />
-                        <Area type="monotone" dataKey="forecast" stroke="#3b82f6" strokeWidth={2} strokeDasharray="5 5" fillOpacity={1} fill="url(#colorForecast)" name="Forecast" />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              </div>
-
-              {/* Right Column: Lists */}
-              <div className="lg:col-span-4 flex flex-col gap-4 h-auto lg:h-full lg:min-h-0">
-                
-                {/* Alerts List */}
-                <div className={`h-[300px] lg:h-auto lg:flex-1 ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} rounded-xl shadow-sm border flex flex-col min-h-0 overflow-hidden`}>
-                  <div className={`p-3 border-b ${theme === 'dark' ? 'border-slate-700' : 'border-slate-100'} flex-none flex justify-between items-center bg-opacity-50`}>
-                    <div className="flex items-center gap-2">
-                      <div className="p-1.5 bg-red-100 rounded-md">
-                        <Bell className="w-4 h-4 text-red-600" />
-                      </div>
-                      <h3 className={`font-semibold text-sm ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{currentLang.recentAlerts}</h3>
-                    </div>
-                    <span className="text-[10px] font-medium px-2 py-0.5 bg-red-100 text-red-700 rounded-full">{unreadCount} new</span>
-                  </div>
-                  <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar">
-                    {alerts.map((alert) => (
-                      <div key={alert.id} onClick={() => {markAsRead(alert.id); setShowAllAlerts(true);}} className={`group p-2 rounded-lg border ${theme === 'dark' ? 'bg-slate-700 border-slate-600 hover:border-slate-500' : 'bg-slate-50 border-slate-100 hover:border-blue-200 hover:bg-white hover:shadow-sm'} transition-all cursor-pointer relative overflow-hidden`}>
-                         <div className={`absolute left-0 top-0 bottom-0 w-1 ${alert.severity === 'critical' ? 'bg-red-500' : alert.severity === 'high' ? 'bg-orange-500' : alert.severity === 'medium' ? 'bg-yellow-500' : 'bg-blue-500'}`}></div>
-                        <div className="pl-2">
-                          <div className="flex justify-between items-start mb-0.5">
-                            <span className={`text-[11px] font-bold ${theme === 'dark' ? 'text-slate-200' : 'text-slate-700'}`}>{alert.machine}</span>
-                            <span className="text-[9px] text-slate-400">{alert.time}</span>
-                          </div>
-                          <p className={`text-[10px] ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'} line-clamp-1`}>{alert.message}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Machine Health List */}
-                <div className={`h-[300px] lg:h-auto lg:flex-1 ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} rounded-xl shadow-sm border flex flex-col min-h-0 overflow-hidden`}>
-                  <div className={`p-3 border-b ${theme === 'dark' ? 'border-slate-700' : 'border-slate-100'} flex-none flex items-center gap-2`}>
-                    <div className="p-1.5 bg-blue-100 rounded-md"><Activity className="w-4 h-4 text-blue-600" /></div>
-                    <h3 className={`font-semibold text-sm ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{currentLang.machineHealth}</h3>
-                  </div>
-                  <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar">
-                    {machineHealth.map((machine, idx) => (
-                      <div key={idx} onClick={() => {setSelectedMachine(machine); setShowMachineDetail(true);}} className={`flex items-center justify-between p-2 rounded-lg border ${theme === 'dark' ? 'bg-slate-700 border-slate-600 hover:bg-slate-600' : 'bg-slate-50 border-slate-100 hover:bg-white hover:shadow-sm hover:border-blue-200'} transition cursor-pointer`}>
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="relative w-6 h-6 flex-none flex items-center justify-center">
-                            <svg className="w-full h-full transform -rotate-90">
-                              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" fill="transparent" className={`${theme === 'dark' ? 'text-slate-600' : 'text-slate-200'}`} />
-                              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" fill="transparent" strokeDasharray={63} strokeDashoffset={63 - (63 * machine.health) / 100} className={`${machine.health >= 80 ? 'text-green-500' : machine.health >= 60 ? 'text-yellow-500' : 'text-red-500'}`} />
-                            </svg>
-                            <span className="absolute text-[7px] font-bold">{machine.health}</span>
-                          </div>
-                          <div className="min-w-0">
-                            <p className={`text-[11px] font-bold ${theme === 'dark' ? 'text-slate-200' : 'text-slate-700'} truncate`}>{machine.name}</p>
-                            <p className="text-[9px] text-slate-400">RUL: {machine.rul} days</p>
-                          </div>
-                        </div>
-                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold border ${machine.status === 'critical' ? 'bg-red-50 text-red-600 border-red-100' : machine.status === 'warning' ? 'bg-yellow-50 text-yellow-600 border-yellow-100' : 'bg-green-50 text-green-600 border-green-100'}`}>
-                          {machine.status === 'critical' ? 'CRIT' : machine.status === 'warning' ? 'WARN' : 'GOOD'}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <Overview 
+            theme={theme}
+            currentLang={currentLang}
+            weatherData={weatherData}
+            kpiCards={kpiCards}
+            productionDataSets={productionDataSets}
+            productionPeriod={productionPeriod}
+            setProductionPeriod={setProductionPeriod}
+            demandDataSets={demandDataSets}
+            demandPeriod={demandPeriod}
+            setDemandPeriod={setDemandPeriod}
+            alerts={alerts}
+            unreadCount={unreadCount}
+            markAsRead={markAsRead}
+            markAllAsRead={markAllAsRead}
+            deleteAllAlerts={deleteAllAlerts}
+            deleteAlert={deleteAlert}
+            machineHealth={machineHealth}
+            setSelectedMachine={setSelectedMachine}
+            setShowMachineDetail={setShowMachineDetail}
+            showAllAlerts={showAllAlerts}
+            setShowAllAlerts={setShowAllAlerts}
+            alertSearch={alertSearch}
+            setAlertSearch={setAlertSearch}
+            alertFilter={alertFilter}
+            setAlertFilter={setAlertFilter}
+            filteredAlerts={filteredAlerts}
+          />
         )}
 
+        {/* --- ส่วน Forecast --- */}
         {activeTab === 'forecast' && (
-        // Container หลัก
-        <div className={`flex flex-col h-auto gap-6 pb-10 relative ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
-          
-          {/* --- Header & Metrics Section --- */}
-          <div className="flex flex-col gap-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h2 className={`text-xl lg:text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
-                  Demand Forecasting
-                </h2>
-                <p className={`text-sm mt-1 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
-                  AI-powered demand prediction for the next 90 days
-                </p>
-              </div>
-              <button 
-                onClick={() => setShowForecastModal(true)}
-                className="bg-blue-600 text-white px-4 py-2 lg:px-6 lg:py-2 rounded-lg font-medium hover:bg-blue-700 transition shadow-sm text-sm lg:text-base whitespace-nowrap"
-              >
-                Generate New Forecast
-              </button>
-            </div>
-
-            {/* Top Metrics Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <MetricCard 
-                theme={theme}
-                label="Forecast Accuracy (MAPE)" 
-                value="8.5%" 
-                labelColor={theme === 'dark' ? 'text-blue-400' : 'text-blue-600'} 
-                valueColor={theme === 'dark' ? 'text-blue-500' : 'text-blue-700'} 
-              />
-              <MetricCard 
-                theme={theme}
-                label="Model Confidence" 
-                value="92%" 
-                labelColor={theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'} 
-                valueColor={theme === 'dark' ? 'text-emerald-500' : 'text-emerald-700'} 
-              />
-              <MetricCard 
-                theme={theme}
-                label="Next Update" 
-                value="3 days" 
-                labelColor={theme === 'dark' ? 'text-purple-400' : 'text-purple-600'} 
-                valueColor={theme === 'dark' ? 'text-purple-500' : 'text-purple-700'} 
-              />
-            </div>
-          </div>
-
-          {/* --- Chart Section --- */}
-          <div className={`rounded-xl shadow-lg border p-4 lg:p-6 ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
-            <div className="w-full h-[400px] min-h-[400px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={demandData} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="gradientForecast" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.6}/>
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1}/>
-                    </linearGradient>
-                    <linearGradient id="gradientActual" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.6}/>
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0.1}/>
-                    </linearGradient>
-                    <linearGradient id="gradientCI" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#93c5fd" stopOpacity={0.4}/>
-                      <stop offset="95%" stopColor="#93c5fd" stopOpacity={0.05}/>
-                    </linearGradient>
-                  </defs>
-                  
-                  <CartesianGrid strokeDasharray="5 5" stroke={theme === 'dark' ? '#334155' : '#e2e8f0'} vertical={true} horizontal={true} />
-                  <XAxis dataKey="month" stroke="#94a3b8" tick={{fontSize: 12, fill: '#94a3b8'}} axisLine={false} tickLine={false} dy={10} />
-                  <YAxis stroke="#94a3b8" tick={{fontSize: 12, fill: '#94a3b8'}} axisLine={false} tickLine={false} />
-                  
-                  <Tooltip 
-                    cursor={{ stroke: theme === 'dark' ? '#fff' : '#94a3b8', strokeWidth: 1, strokeDasharray: '5 5' }}
-                    content={({ active, payload, label }) => {
-                      if (active && payload && payload.length) {
-                        const upperVal = payload.find(p => p.dataKey === 'upper')?.value;
-                        const forecastVal = payload.find(p => p.dataKey === 'forecast')?.value;
-                        const lowerVal = payload.find(p => p.dataKey === 'lower')?.value;
-                        const actualVal = payload.find(p => p.dataKey === 'actual')?.value;
-
-                        return (
-                          <div className={`backdrop-blur-sm border p-4 rounded-lg shadow-2xl min-w-[200px] ${theme === 'dark' ? 'bg-slate-900/95 border-slate-600' : 'bg-white/95 border-slate-200'}`}>
-                            <p className={`font-bold mb-3 text-base border-b pb-2 ${theme === 'dark' ? 'text-white border-slate-700' : 'text-slate-800 border-slate-200'}`}>
-                              {label}
-                            </p>
-                            <div className="space-y-2 text-sm font-medium">
-                              {upperVal !== undefined && (
-                                <div className={`${theme === 'dark' ? 'text-blue-300' : 'text-blue-500'} flex justify-between gap-4`}>
-                                  <span>Upper Bound :</span>
-                                  <span>{upperVal}</span>
-                                </div>
-                              )}
-                              {forecastVal !== undefined && (
-                                <div className="text-blue-600 flex justify-between gap-4 font-bold">
-                                  <span>Forecast :</span>
-                                  <span>{forecastVal}</span>
-                                </div>
-                              )}
-                              {lowerVal !== undefined && (
-                                <div className={`${theme === 'dark' ? 'text-blue-300' : 'text-blue-500'} flex justify-between gap-4`}>
-                                  <span>Lower Bound :</span>
-                                  <span>{lowerVal}</span>
-                                </div>
-                              )}
-                              {actualVal !== undefined && (
-                                <div className={`text-emerald-500 flex justify-between gap-4 mt-2 pt-2 border-t font-bold ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>
-                                  <span>Actual :</span>
-                                  <span>{actualVal}</span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  
-                  <Area type="monotone" dataKey="upper" stroke="none" fill="url(#gradientCI)" activeDot={false} />
-                  <Area type="monotone" dataKey="lower" stroke="none" fill="url(#gradientCI)" activeDot={false} />
-                  <Area type="monotone" dataKey="forecast" stroke="#3b82f6" strokeWidth={3} fill="url(#gradientForecast)" activeDot={{ r: 6, stroke: theme === 'dark' ? '#fff' : '#fff', strokeWidth: 2 }} />
-                  <Area type="monotone" dataKey="actual" stroke="#10b981" strokeWidth={3} fill="url(#gradientActual)" activeDot={{ r: 6, stroke: theme === 'dark' ? '#fff' : '#fff', strokeWidth: 2 }} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* Legend */}
-            <div className="mt-4 flex flex-wrap justify-center items-center gap-x-8 gap-y-3 select-none">
-              <CustomLegendItem label="Upper Bound" color="#93c5fd" theme={theme} />
-              <CustomLegendItem label="Forecast" color="#3b82f6" theme={theme} />
-              <CustomLegendItem label="Lower Bound" color="#93c5fd" theme={theme} />
-              <CustomLegendItem label="Actual" color="#10b981" theme={theme} />
-            </div>
-          </div>
-
-          {/* --- Model Info & Metrics Section --- */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6">
-            
-            {/* Model Information Card */}
-            <div className={`rounded-xl shadow-lg border p-6 h-full ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
-              <h3 className={`text-lg font-bold mb-6 border-b pb-2 ${theme === 'dark' ? 'text-white border-slate-700' : 'text-slate-800 border-slate-200'}`}>
-                Model Information
-              </h3>
-              <div className="space-y-4 text-sm">
-                <CleanInfoRow theme={theme} label="Algorithm" value="LSTM + Attention" boldValue />
-                <CleanInfoRow theme={theme} label="Version" value="v1.2.3" />
-                <CleanInfoRow theme={theme} label="Trained" value="2024-06-15" />
-                <CleanInfoRow theme={theme} label="Dataset" value="18 months history" boldValue />
-              </div>
-            </div>
-
-            {/* Performance Metrics Card */}
-            <div className={`rounded-xl shadow-lg border p-6 h-full ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
-              <h3 className={`text-lg font-bold mb-6 border-b pb-2 ${theme === 'dark' ? 'text-white border-slate-700' : 'text-slate-800 border-slate-200'}`}>
-                Performance Metrics
-              </h3>
-              <div className="space-y-4 text-sm">
-                <CleanInfoRow theme={theme} label="MAPE" value="8.5%" valueColor="text-emerald-500" boldValue />
-                <CleanInfoRow theme={theme} label="RMSE" value="45.2" />
-                <CleanInfoRow theme={theme} label="R² Score" value="0.94" valueColor="text-emerald-500" boldValue />
-                <CleanInfoRow theme={theme} label="Inference Time" value="234ms" />
-              </div>
-            </div>
-          </div>
-
-          {/* --- Generate Forecast Modal & Loading State --- */}
-          {showForecastModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-              <div className={`w-full max-w-lg rounded-xl shadow-2xl overflow-hidden ${theme === 'dark' ? 'bg-[#1e293b]' : 'bg-white'} zoom-in-95 duration-200`}>
-                
-                {/* เงื่อนไขแสดงผล: ถ้ากำลังโหลด (isGenerating) ให้แสดงหน้าโหลด, ถ้าไม่ ให้แสดงฟอร์ม */}
-                {isGenerating ? (
-                  <div className="p-10 flex flex-col items-center justify-center text-center space-y-5">
-                    {/* Spinner */}
-                    <div className="relative">
-                      <div className="w-16 h-16 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
-                    </div>
-                    
-                    <div>
-                      <h3 className={`text-xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
-                        Processing...
-                      </h3>
-                      <p className={`text-sm ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
-                        Generating demand forecast...
-                      </p>
-                    </div>
-
-                    {/* Progress Bar (Indeterminate) */}
-                    <div className={`w-full h-2 rounded-full overflow-hidden mt-2 ${theme === 'dark' ? 'bg-slate-700' : 'bg-slate-100'}`}>
-                      <div className="h-full bg-blue-600 rounded-full w-2/3 animate-pulse"></div>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    {/* --- Form Header --- */}
-                    <div className={`px-6 py-4 border-b flex justify-between items-center ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>
-                      <h3 className={`text-lg font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
-                        Generate New Forecast
-                      </h3>
-                      <button 
-                        onClick={() => setShowForecastModal(false)}
-                        className={`p-1 rounded-full hover:bg-slate-100 transition ${theme === 'dark' ? 'text-slate-400 hover:bg-slate-700' : 'text-slate-500'}`}
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
-                    </div>
-
-                    {/* --- Form Body --- */}
-                    <div className="p-6 space-y-5">
-                      
-                      {/* Forecast Horizon */}
-                      <div>
-                        <label className={`block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
-                          Forecast Horizon (Days)
-                        </label>
-                        <input 
-                          type="number" 
-                          defaultValue={90}
-                          className={`w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition ${
-                            theme === 'dark' 
-                              ? 'bg-slate-800 border-slate-600 text-white' 
-                              : 'bg-white border-slate-300 text-slate-900'
-                          }`}
-                        />
-                      </div>
-
-                      {/* Products Checkboxes */}
-                      <div>
-                        <label className={`block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
-                          Products
-                        </label>
-                        <div className="space-y-2">
-                          {['PROD-001', 'PROD-002', 'PROD-003'].map((prod, idx) => (
-                            <label key={idx} className="flex items-center gap-3 cursor-pointer group">
-                              <input 
-                                type="checkbox" 
-                                defaultChecked={idx < 2} 
-                                className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                              />
-                              <span className={`text-sm group-hover:opacity-80 transition ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
-                                {prod}
-                              </span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Confidence Level */}
-                      <div>
-                        <label className={`block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
-                          Confidence Level
-                        </label>
-                        <select className={`w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none appearance-none ${
-                            theme === 'dark' 
-                              ? 'bg-slate-800 border-slate-600 text-white' 
-                              : 'bg-white border-slate-300 text-slate-900'
-                          }`}>
-                          <option>95%</option>
-                          <option>90%</option>
-                          <option>99%</option>
-                        </select>
-                      </div>
-
-                      {/* Include Confidence Intervals */}
-                      <label className="flex items-center gap-3 cursor-pointer group">
-                        <input 
-                          type="checkbox" 
-                          defaultChecked
-                          className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                        />
-                        <span className={`text-sm font-medium group-hover:opacity-80 transition ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
-                          Include confidence intervals
-                        </span>
-                      </label>
-
-                    </div>
-
-                    {/* --- Form Footer Buttons --- */}
-                    <div className={`px-6 py-4 border-t flex justify-end gap-3 ${theme === 'dark' ? 'border-slate-700 bg-slate-800/50' : 'border-slate-100 bg-slate-50'}`}>
-                      <button 
-                        onClick={() => setShowForecastModal(false)}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium border transition ${
-                          theme === 'dark' 
-                            ? 'border-slate-600 text-slate-300 hover:bg-slate-700' 
-                            : 'border-slate-300 text-slate-700 hover:bg-white hover:shadow-sm'
-                        }`}
-                      >
-                        Cancel
-                      </button>
-                      <button 
-                        onClick={() => {
-                          // เริ่มกระบวนการโหลด 5 วินาที
-                          setIsGenerating(true);
-                          setTimeout(() => {
-                            setIsGenerating(false);
-                            setShowForecastModal(false);
-                          }, 5000);
-                        }}
-                        className="px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 shadow-md transition hover:shadow-lg hover:-translate-y-0.5"
-                      >
-                        Generate New Forecast
-                      </button>
-                    </div>
-                  </>
-                )}
-
-              </div>
-            </div>
-          )}
-
-        </div>
+          <Forecast 
+            theme={theme}
+            language={language}
+            currentLang={currentLang}
+            // เปลี่ยนจาก demandData เป็น 3 บรรทัดนี้ครับ:
+            demandDataSets={demandDataSets} 
+            demandPeriod={demandPeriod}
+            setDemandPeriod={setDemandPeriod}
+            setShowForecastModal={setShowForecastModal}
+          />
         )}
 
+        {/* --- ส่วน Maintenance --- */}
         {activeTab === 'maintenance' && (
-          <div className="space-y-6">
-            <div className={`${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} rounded-xl shadow-sm border p-6`}>
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{currentLang.predictiveMaintenance}</h2>
-                  <p className={`${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'} mt-1`}>{currentLang.aiDriven}</p>
-                </div>
-                <button 
-                  onClick={() => setShowAnalysisModal(true)}
-                  className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition shadow-sm"
-                >
-                  {currentLang.runAnalysis}
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {machineHealth.map((machine, idx) => (
-                  <div key={idx} className={`border-2 rounded-xl p-6 cursor-pointer transition-all hover:shadow-lg ${
-                    machine.status === 'critical' ? 'border-red-300 bg-red-50 hover:bg-red-100' :
-                    machine.status === 'warning' ? 'border-yellow-300 bg-yellow-50 hover:bg-yellow-100' :
-                    'border-green-300 bg-green-50 hover:bg-green-100'
-                  } ${theme === 'dark' && (
-                    machine.status === 'critical' ? 'bg-red-900 bg-opacity-20 border-red-700 hover:bg-opacity-30' :
-                    machine.status === 'warning' ? 'bg-yellow-900 bg-opacity-20 border-yellow-700 hover:bg-opacity-30' :
-                    'bg-green-900 bg-opacity-20 border-green-700 hover:bg-opacity-30'
-                  )}`}>
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center space-x-2">
-                        <Factory className={`w-6 h-6 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`} />
-                        <h3 className={`font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{machine.name}</h3>
-                      </div>
-                      {machine.status === 'critical' ? 
-                        <XCircle className="w-6 h-6 text-red-600" /> :
-                        machine.status === 'warning' ?
-                        <AlertTriangle className="w-6 h-6 text-yellow-600" /> :
-                        <CheckCircle className="w-6 h-6 text-green-600" />
-                      }
-                    </div>
-
-                    <div className="space-y-4">
-                      <div>
-                        <div className="flex justify-between text-sm mb-2">
-                          <span className={`${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>{currentLang.healthScore}</span>
-                          <span className={`font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{machine.health}%</span>
-                        </div>
-                        <div className={`w-full ${theme === 'dark' ? 'bg-slate-700' : 'bg-slate-200'} rounded-full h-3`}>
-                          <div 
-                            className={`h-3 rounded-full transition-all duration-500 ${
-                              machine.health >= 80 ? 'bg-green-500' :
-                              machine.health >= 60 ? 'bg-yellow-500' :
-                              'bg-red-500'
-                            }`}
-                            style={{ width: `${machine.health}%` }}
-                          />
-                        </div>
-                      </div>
-
-                      <div className={`${theme === 'dark' ? 'bg-slate-700 bg-opacity-50' : 'bg-white'} rounded-lg p-3 space-y-2`}>
-                        <div className="flex justify-between text-sm">
-                          <span className={`${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>{currentLang.rul}</span>
-                          <span className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{machine.rul} {currentLang.days}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className={`${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>{currentLang.failureProbability}</span>
-                          <span className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
-                            {machine.status === 'critical' ? '18%' : machine.status === 'warning' ? '8%' : '2%'}
-                          </span>
-                        </div>
-                      </div>
-
-                      <button 
-                        onClick={() => {
-                          if (machine.status === 'critical') {
-                            handleOpenSchedule(machine, 'urgent');
-                          } else if (machine.status === 'warning') {
-                            handleOpenSchedule(machine, 'inspection');
-                          } else {
-                            setSelectedMachine(machine);
-                            setShowMachineDetail(true);
-                          }
-                        }}
-                        className={`w-full py-2 rounded-lg font-medium transition ${
-                          machine.status === 'critical' ? 'bg-red-600 hover:bg-red-700 text-white' :
-                          machine.status === 'warning' ? 'bg-yellow-600 hover:bg-yellow-700 text-white' :
-                          theme === 'dark' ? 'bg-slate-600 hover:bg-slate-500 text-white' : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
-                        }`}>
-                        {machine.status === 'critical' ? currentLang.scheduleUrgent :
-                         machine.status === 'warning' ? currentLang.scheduleInspection :
-                         currentLang.viewDetails}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          <Maintenance 
+            theme={theme}
+            currentLang={currentLang}
+            machineHealth={machineHealth}
+            setShowAnalysisModal={setShowAnalysisModal}
+            handleOpenSchedule={handleOpenSchedule}
+            setSelectedMachine={setSelectedMachine}
+            setShowMachineDetail={setShowMachineDetail}
+          />
         )}
 
+        {/* --- ส่วน Planning  --- */}
         {activeTab === 'planning' && (
-          <div className="space-y-6">
-            <div className={`${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} rounded-xl shadow-sm border p-6`}>
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{currentLang.productionPlanning}</h2>
-                  <p className={`${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'} mt-1`}>
-                    {language === 'th' ? 'การจัดตารางการผลิตและจัดสรรทรัพยากรด้วย AI' : 'AI-optimized production scheduling and resource allocation'}
-                  </p>
-                </div>
-                <button 
-                  onClick={() => setShowPlanningModal(true)}
-                  className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition shadow-sm"
-                >
-                  {currentLang.optimizeSchedule}
-                </button>
-              </div>
-
-              <div className="grid grid-cols-4 gap-4 mb-6">
-                <div className={`${theme === 'dark' ? 'bg-gradient-to-br from-blue-900 to-blue-800 border-blue-700' : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'} rounded-lg p-4 border`}>
-                  <p className={`text-sm font-medium ${theme === 'dark' ? 'text-blue-300' : 'text-blue-700'}`}>
-                    {language === 'th' ? 'คำสั่งที่วางแผนไว้' : 'Planned Orders'}
-                  </p>
-                  <p className={`text-3xl font-bold ${theme === 'dark' ? 'text-blue-200' : 'text-blue-800'} mt-2`}>156</p>
-                </div>
-                <div className={`${theme === 'dark' ? 'bg-gradient-to-br from-green-900 to-green-800 border-green-700' : 'bg-gradient-to-br from-green-50 to-green-100 border-green-200'} rounded-lg p-4 border`}>
-                  <p className={`text-sm font-medium ${theme === 'dark' ? 'text-green-300' : 'text-green-700'}`}>
-                    {language === 'th' ? 'การใช้งานเครื่องจักร' : 'Machine Utilization'}
-                  </p>
-                  <p className={`text-3xl font-bold ${theme === 'dark' ? 'text-green-200' : 'text-green-800'} mt-2`}>87%</p>
-                </div>
-                <div className={`${theme === 'dark' ? 'bg-gradient-to-br from-purple-900 to-purple-800 border-purple-700' : 'bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200'} rounded-lg p-4 border`}>
-                  <p className={`text-sm font-medium ${theme === 'dark' ? 'text-purple-300' : 'text-purple-700'}`}>
-                    {language === 'th' ? 'ต้นทุนรวม' : 'Total Cost'}
-                  </p>
-                  <p className={`text-3xl font-bold ${theme === 'dark' ? 'text-purple-200' : 'text-purple-800'} mt-2`}>$125K</p>
-                </div>
-                <div className={`${theme === 'dark' ? 'bg-gradient-to-br from-orange-900 to-orange-800 border-orange-700' : 'bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200'} rounded-lg p-4 border`}>
-                  <p className={`text-sm font-medium ${theme === 'dark' ? 'text-orange-300' : 'text-orange-700'}`}>
-                    {language === 'th' ? 'การส่งตรงเวลา' : 'On-Time Delivery'}
-                  </p>
-                  <p className={`text-3xl font-bold ${theme === 'dark' ? 'text-orange-200' : 'text-orange-800'} mt-2`}>98%</p>
-                </div>
-              </div>
-            </div>
-          </div>
+          <Planning 
+            theme={theme}
+            language={language}
+            currentLang={currentLang}
+            setShowPlanningModal={setShowPlanningModal}
+          />
         )}
+
       </main>
 
       {/* Footer */}
@@ -1569,21 +873,248 @@ const Dashboard = ({ onLogout }) => {
         </div>
       </footer>
 
+      {/* --- MODALS --- */}
+      
+      {/* Forecast Modal */}
+      {showForecastModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className={`w-full max-w-lg rounded-xl shadow-2xl overflow-hidden ${theme === 'dark' ? 'bg-[#1e293b]' : 'bg-white'} zoom-in-95 duration-200`}>
+            
+            {/* Header */}
+            <div className={`px-6 py-4 border-b flex justify-between items-center ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>
+              <h3 className={`text-lg font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
+                {currentLang.generateForecast}
+              </h3>
+              <button 
+                onClick={() => setShowForecastModal(false)}
+                className={`p-1 rounded-full hover:bg-slate-100 transition ${theme === 'dark' ? 'text-slate-400 hover:bg-slate-700' : 'text-slate-500'}`}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-5">
+              
+              {/* Forecast Horizon */}
+              <div>
+                <label className={`block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
+                  {language === 'th' ? 'ระยะเวลาการพยากรณ์ (วัน)' : 'Forecast Horizon (Days)'}
+                </label>
+                <input 
+                  type="number" 
+                  value={forecastParams.horizon} 
+                  onChange={(e) => setForecastParams({...forecastParams, horizon: parseInt(e.target.value)})} 
+                  className={`w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition ${
+                    theme === 'dark' 
+                      ? 'bg-slate-800 border-slate-600 text-white' 
+                      : 'bg-white border-slate-300 text-slate-900'
+                  }`}
+                />
+              </div>
+
+              {/* Products Checkboxes */}
+              <div>
+                <label className={`block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Products
+                </label>
+                <div className="space-y-2">
+                  {['PROD-001', 'PROD-002', 'PROD-003'].map((prod) => (
+                    <label key={prod} className="flex items-center gap-3 cursor-pointer group">
+                      <input 
+                        type="checkbox" 
+                        checked={forecastParams.products.includes(prod)}
+                        onChange={(e) => {
+                          const newProducts = e.target.checked
+                            ? [...forecastParams.products, prod]
+                            : forecastParams.products.filter(p => p !== prod);
+                          setForecastParams({...forecastParams, products: newProducts});
+                        }}
+                        className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                      />
+                      <span className={`text-sm group-hover:opacity-80 transition ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
+                        {prod}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Confidence Level */}
+              <div>
+                <label className={`block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Confidence Level
+                </label>
+                <select 
+                  value={forecastParams.confidenceLevel}
+                  onChange={(e) => setForecastParams({...forecastParams, confidenceLevel: parseFloat(e.target.value)})}
+                  className={`w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none appearance-none ${
+                    theme === 'dark' 
+                      ? 'bg-slate-800 border-slate-600 text-white' 
+                      : 'bg-white border-slate-300 text-slate-900'
+                  }`}
+                >
+                  <option value={0.90}>90%</option>
+                  <option value={0.95}>95%</option>
+                  <option value={0.99}>99%</option>
+                </select>
+              </div>
+
+              {/* Include Confidence Intervals */}
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <input 
+                  type="checkbox" 
+                  checked={forecastParams.includeConfidence}
+                  onChange={(e) => setForecastParams({...forecastParams, includeConfidence: e.target.checked})}
+                  className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                />
+                <span className={`text-sm font-medium group-hover:opacity-80 transition ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Include confidence intervals
+                </span>
+              </label>
+
+            </div>
+
+            {/* Footer Buttons */}
+            <div className={`px-6 py-4 border-t flex justify-end gap-3 ${theme === 'dark' ? 'border-slate-700 bg-slate-800/50' : 'border-slate-100 bg-slate-50'}`}>
+              <button 
+                onClick={() => setShowForecastModal(false)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium border transition ${
+                  theme === 'dark' 
+                    ? 'border-slate-600 text-slate-300 hover:bg-slate-700' 
+                    : 'border-slate-300 text-slate-700 hover:bg-white hover:shadow-sm'
+                }`}
+              >
+                {currentLang.cancel}
+              </button>
+              <button 
+                onClick={handleGenerateForecast}
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 shadow-md transition hover:shadow-lg hover:-translate-y-0.5"
+              >
+                {currentLang.generateForecast}
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
       {/* Planning Modal */}
       {showPlanningModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-2xl w-full shadow-2xl">
-            <div className="p-6 border-b border-slate-200 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-slate-800">Optimize Production Schedule</h2>
-              <button onClick={() => setShowPlanningModal(false)} className="text-slate-400 hover:text-slate-600"><X className="w-6 h-6" /></button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className={`w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden ${theme === 'dark' ? 'bg-[#1e293b]' : 'bg-white'} zoom-in-95 duration-200`}>
+            
+            {/* Header */}
+            <div className={`px-6 py-4 border-b flex justify-between items-center ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>
+              <h3 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
+                Optimize Production Schedule
+              </h3>
+              <button 
+                onClick={() => setShowPlanningModal(false)}
+                className={`p-1 rounded-full hover:bg-slate-100 transition ${theme === 'dark' ? 'text-slate-400 hover:bg-slate-700' : 'text-slate-500'}`}
+              >
+                <X className="w-6 h-6" />
+              </button>
             </div>
+
+            {/* Body */}
             <div className="p-6 space-y-6">
-               <p className="text-slate-600">Configuration options for optimization...</p>
+              
+              {/* Date Range Row */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={`block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
+                    Start Date
+                  </label>
+                  <input 
+                    type="date" 
+                    value={planningParams.startDate} 
+                    onChange={(e) => setPlanningParams({...planningParams, startDate: e.target.value})}
+                    className={`w-full px-4 py-2.5 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition ${
+                      theme === 'dark' ? 'bg-slate-800 border-slate-600 text-white' : 'bg-white border-slate-300 text-slate-900'
+                    }`}
+                  />
+                </div>
+                <div>
+                  <label className={`block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
+                    End Date
+                  </label>
+                  <input 
+                    type="date" 
+                    value={planningParams.endDate} 
+                    onChange={(e) => setPlanningParams({...planningParams, endDate: e.target.value})}
+                    className={`w-full px-4 py-2.5 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition ${
+                      theme === 'dark' ? 'bg-slate-800 border-slate-600 text-white' : 'bg-white border-slate-300 text-slate-900'
+                    }`}
+                  />
+                </div>
+              </div>
+
+              {/* Optimization Objective */}
+              <div>
+                <label className={`block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Optimization Objective
+                </label>
+                <select 
+                  value={planningParams.objective}
+                  onChange={(e) => setPlanningParams({...planningParams, objective: e.target.value})}
+                  className={`w-full px-4 py-2.5 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none appearance-none ${
+                    theme === 'dark' ? 'bg-slate-800 border-slate-600 text-white' : 'bg-white border-slate-300 text-slate-900'
+                  }`}
+                >
+                  <option value="minimize_cost">Minimize Production Cost</option>
+                  <option value="maximize_output">Maximize Output</option>
+                  <option value="balance_load">Balance Machine Load</option>
+                </select>
+              </div>
+
+              {/* Constraints Profile */}
+              <div>
+                <label className={`block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Constraints Profile
+                </label>
+                <select 
+                  value={planningParams.constraints}
+                  onChange={(e) => setPlanningParams({...planningParams, constraints: e.target.value})}
+                  className={`w-full px-4 py-2.5 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none appearance-none ${
+                    theme === 'dark' ? 'bg-slate-800 border-slate-600 text-white' : 'bg-white border-slate-300 text-slate-900'
+                  }`}
+                >
+                  <option value="standard">Standard Constraints</option>
+                  <option value="strict">Strict Deadlines</option>
+                  <option value="flexible">Flexible Resource Allocation</option>
+                </select>
+              </div>
+
+              {/* Info Box */}
+              <div className={`p-4 rounded-lg border ${theme === 'dark' ? 'bg-blue-900/20 border-blue-800 text-blue-200' : 'bg-blue-50 border-blue-200 text-blue-800'}`}>
+                <p className="text-sm">
+                  <span className="font-bold">Note:</span> Optimization may take 3-5 minutes depending on complexity. You'll receive a notification when complete.
+                </p>
+              </div>
+
             </div>
-            <div className="p-6 border-t border-slate-200 flex justify-end space-x-3">
-              <button onClick={() => setShowPlanningModal(false)} className="px-6 py-2 border border-slate-300 rounded-lg text-slate-700">Cancel</button>
-              <button onClick={handleOptimizeSchedule} className="px-6 py-2 bg-blue-600 text-white rounded-lg">Start Optimization</button>
+
+            {/* Footer Buttons */}
+            <div className={`px-6 py-4 border-t flex justify-end gap-3 ${theme === 'dark' ? 'border-slate-700 bg-slate-800/50' : 'border-slate-100 bg-slate-50'}`}>
+              <button 
+                onClick={() => setShowPlanningModal(false)}
+                className={`px-6 py-2.5 rounded-lg text-sm font-medium border transition ${
+                  theme === 'dark' 
+                    ? 'border-slate-600 text-slate-300 hover:bg-slate-700' 
+                    : 'border-slate-300 text-slate-700 hover:bg-white hover:shadow-sm'
+                }`}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleOptimizeSchedule}
+                className="px-6 py-2.5 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 shadow-md transition hover:shadow-lg hover:-translate-y-0.5"
+              >
+                Start Optimization
+              </button>
             </div>
+
           </div>
         </div>
       )}
@@ -1607,78 +1138,363 @@ const Dashboard = ({ onLogout }) => {
         </div>
       )}
 
-      {/* All Alerts Modal */}
-      {showAllAlerts && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className={`${theme === 'dark' ? 'bg-slate-800' : 'bg-white'} rounded-xl max-w-6xl w-full shadow-2xl my-8 flex flex-col`} style={{ maxHeight: 'calc(100vh - 4rem)' }}>
-            <div className={`p-6 ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'} border-b flex justify-between`}>
-               <h2 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{currentLang.allAlerts}</h2>
-               <button onClick={() => setShowAllAlerts(false)}><X className={`w-6 h-6 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`} /></button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-6">
-               {filteredAlerts.length === 0 ? <p className="text-center text-slate-500">{currentLang.noAlertsFound}</p> : (
-                 <div className="space-y-3">
-                   {filteredAlerts.map(alert => (
-                     <div key={alert.id} className={`p-4 border rounded-lg ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>
-                       <div className="flex justify-between">
-                         <span className={`font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{alert.machine}</span>
-                         <span className="text-sm text-slate-500">{alert.time}</span>
-                       </div>
-                       <p className={`text-sm ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>{alert.message}</p>
-                     </div>
-                   ))}
-                 </div>
-               )}
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Schedule Modal */}
       {showScheduleModal && selectedMachine && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className={`${theme === 'dark' ? 'bg-slate-800' : 'bg-white'} rounded-xl max-w-2xl w-full shadow-2xl`}>
-            <div className={`p-6 ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'} border-b flex items-center justify-between`}>
-              <h2 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{scheduleType === 'urgent' ? currentLang.urgentMaintenance : currentLang.routineInspection}</h2>
-              <button onClick={() => setShowScheduleModal(false)} className={`${theme === 'dark' ? 'text-slate-400 hover:text-slate-200' : 'text-slate-400 hover:text-slate-600'}`}><X className="w-6 h-6" /></button>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className={`${theme === 'dark' ? 'bg-[#1e293b]' : 'bg-white'} rounded-xl w-full shadow-2xl overflow-hidden`} style={{ maxWidth: '600px' }}>
+            
+            {/* Header */}
+            <div className={`px-6 py-4 border-b flex items-start justify-between ${theme === 'dark' ? 'border-slate-700' : 'border-slate-100'}`}>
+              <div>
+                <h2 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
+                  {scheduleType === 'urgent' ? currentLang.urgentMaintenance : currentLang.routineInspection}
+                </h2>
+                <p className={`text-sm mt-1 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
+                  {selectedMachine.name} - {selectedMachine.type}
+                </p>
+              </div>
+              <button 
+                onClick={() => setShowScheduleModal(false)} 
+                className={`p-1 rounded-full hover:bg-slate-100 transition ${theme === 'dark' ? 'text-slate-400 hover:bg-slate-700' : 'text-slate-400'}`}
+              >
+                <X className="w-6 h-6" />
+              </button>
             </div>
-            <div className="p-6 space-y-4">
-               <input type="date" value={scheduleForm.date} onChange={(e) => setScheduleForm({...scheduleForm, date: e.target.value})} className="w-full border rounded p-2" />
-               <input type="time" value={scheduleForm.time} onChange={(e) => setScheduleForm({...scheduleForm, time: e.target.value})} className="w-full border rounded p-2" />
-               <select value={scheduleForm.technician} onChange={(e) => setScheduleForm({...scheduleForm, technician: e.target.value})} className="w-full border rounded p-2">
-                 <option value="">{currentLang.selectTechnician}</option>
-                 <option value="tech1">Tech 1</option>
-                 <option value="tech2">Tech 2</option>
-               </select>
+
+            {/* Body */}
+            <div className="p-6 space-y-5">
+
+              {/* Urgent Alert Box */}
+              {scheduleType === 'urgent' && (
+                <div className="bg-red-50 border border-red-100 rounded-lg p-4 flex gap-3 items-start animate-in zoom-in-95 duration-200">
+                  <div className="mt-0.5 p-1 bg-red-100 rounded-full">
+                    <AlertTriangle className="w-4 h-4 text-red-600" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-red-700">Urgent Action Required!</h4>
+                    <p className="text-xs text-red-600 mt-1">
+                      Machine has high risk of failure. Recommended action within 7 days
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Date & Time Row */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={`block text-xs font-semibold mb-1.5 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>Select Date</label>
+                  <input 
+                    type="date" 
+                    value={scheduleForm.date} 
+                    onChange={(e) => setScheduleForm({...scheduleForm, date: e.target.value})} 
+                    className={`w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition ${
+                      theme === 'dark' ? 'bg-slate-800 border-slate-600 text-white' : 'bg-white border-slate-300 text-slate-900'
+                    }`} 
+                  />
+                </div>
+                <div>
+                  <label className={`block text-xs font-semibold mb-1.5 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>Select Time <span className="text-red-500">*</span></label>
+                  <input 
+                    type="time" 
+                    value={scheduleForm.time} 
+                    onChange={(e) => setScheduleForm({...scheduleForm, time: e.target.value})} 
+                    className={`w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition ${
+                      theme === 'dark' ? 'bg-slate-800 border-slate-600 text-white' : 'bg-white border-slate-300 text-slate-900'
+                    }`} 
+                  />
+                </div>
+              </div>
+
+              {/* Technician */}
+              <div>
+                <label className={`block text-xs font-semibold mb-1.5 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>Assign Technician <span className="text-red-500">*</span></label>
+                <select 
+                  value={scheduleForm.technician} 
+                  onChange={(e) => setScheduleForm({...scheduleForm, technician: e.target.value})} 
+                  className={`w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition ${
+                    theme === 'dark' ? 'bg-slate-800 border-slate-600 text-white' : 'bg-white border-slate-300 text-slate-900'
+                  }`}
+                >
+                  <option value="">{currentLang.selectTechnician}</option>
+                  <option value="tech1">Sarah Connor (Senior)</option>
+                  <option value="tech2">John Doe (Junior)</option>
+                  <option value="tech3">Mike Ross (Specialist)</option>
+                </select>
+              </div>
+
+              {/* Priority */}
+              <div>
+                <label className={`block text-xs font-semibold mb-1.5 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>Priority</label>
+                <div className="flex gap-3">
+                  {['Low', 'Medium', 'High'].map((level) => (
+                    <button
+                      key={level}
+                      onClick={() => setScheduleForm({...scheduleForm, priority: level.toLowerCase()})}
+                      className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
+                        scheduleForm.priority === level.toLowerCase()
+                          ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-600 ring-offset-1'
+                          : theme === 'dark' ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      {level}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Additional Notes */}
+              <div>
+                <label className={`block text-xs font-semibold mb-1.5 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>Additional Notes</label>
+                <textarea 
+                  rows="3"
+                  placeholder="Specify details, symptoms found, or special requests..."
+                  className={`w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none resize-none transition ${
+                    theme === 'dark' ? 'bg-slate-800 border-slate-600 text-white placeholder:text-slate-500' : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400'
+                  }`}
+                ></textarea>
+              </div>
+
+              {/* Appointment Summary Box */}
+              <div className={`p-4 rounded-lg border ${theme === 'dark' ? 'bg-slate-800/50 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
+                <h4 className={`text-sm font-bold mb-2 ${theme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`}>Appointment Summary</h4>
+                <div className="space-y-1 text-xs">
+                  <div className="flex">
+                    <span className={`w-20 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Machine:</span>
+                    <span className={`font-medium ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>{selectedMachine.name}</span>
+                  </div>
+                  <div className="flex">
+                    <span className={`w-20 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Type:</span>
+                    <span className={`font-medium ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>{scheduleType === 'urgent' ? 'Urgent Maintenance' : 'Routine Inspection'}</span>
+                  </div>
+                  <div className="flex">
+                    <span className={`w-20 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Date:</span>
+                    <span className={`font-medium ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>{scheduleForm.date || '-'}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className={`w-20 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Priority:</span>
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${
+                      scheduleForm.priority === 'high' ? 'bg-red-100 text-red-700' : 
+                      scheduleForm.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-700'
+                    }`}>
+                      {scheduleForm.priority || 'Medium'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
             </div>
-            <div className={`p-6 ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'} border-t flex justify-end space-x-3`}>
-              <button onClick={() => setShowScheduleModal(false)} className="px-6 py-2 border rounded-lg">{currentLang.cancel}</button>
-              <button onClick={handleScheduleSubmit} className="px-6 py-2 bg-blue-600 text-white rounded-lg">{currentLang.confirmSchedule}</button>
+
+            {/* Footer Buttons */}
+            <div className={`px-6 py-4 border-t flex justify-end gap-3 ${theme === 'dark' ? 'border-slate-700 bg-slate-800/50' : 'border-slate-100 bg-slate-50'}`}>
+              <button 
+                onClick={() => setShowScheduleModal(false)} 
+                className={`px-6 py-2 rounded-lg text-sm font-medium border transition ${
+                  theme === 'dark' ? 'border-slate-600 text-slate-300 hover:bg-slate-700' : 'border-slate-300 text-slate-600 hover:bg-white hover:shadow-sm'
+                }`}
+              >
+                {currentLang.cancel}
+              </button>
+              
+              {/* ปุ่ม Confirm Schedule พร้อม Logic การ Disable */}
+              <button 
+                onClick={handleScheduleSubmit} 
+                disabled={!scheduleForm.technician || !scheduleForm.time} // เงื่อนไข: ต้องมี Technician และ Time
+                className={`px-6 py-2 rounded-lg text-sm font-medium shadow-md transition-all ${
+                  !scheduleForm.technician || !scheduleForm.time
+                    ? 'opacity-50 cursor-not-allowed' // สไตล์เมื่อ Disabled
+                    : 'hover:shadow-lg hover:-translate-y-0.5' // สไตล์เมื่อ Enabled
+                } ${
+                   theme === 'dark' ? 'bg-slate-600 text-white' : ''
+                }`}
+                // ใช้ style ใน Light Mode ตามเดิม (แต่ถ้า Disabled จะจางลงด้วย opacity)
+                style={theme === 'dark' ? {} : { backgroundColor: '#b4c4d6', color: '#475569' }}
+              >
+                {currentLang.confirmSchedule}
+              </button>
             </div>
+
           </div>
         </div>
       )}
 
       {/* Machine Detail Modal */}
       {showMachineDetail && selectedMachine && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className={`${theme === 'dark' ? 'bg-slate-800' : 'bg-white'} rounded-xl w-full shadow-2xl`} style={{ maxWidth: '900px', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
-            <div className={`p-6 ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'} border-b flex items-center justify-between flex-shrink-0`}>
-              <div className="flex items-center space-x-3">
-                <Factory className={`w-8 h-8 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`} />
-                <div><h2 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{selectedMachine.name}</h2><p className={`text-sm ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>{selectedMachine.type}</p></div>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className={`${theme === 'dark' ? 'bg-[#0f172a]' : 'bg-slate-50'} rounded-xl w-full shadow-2xl overflow-hidden flex flex-col`} style={{ maxWidth: '1000px', maxHeight: '90vh' }}>
+            
+            {/* 1. Header */}
+            <div className={`px-6 py-4 border-b flex items-center justify-between flex-shrink-0 ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
+              <div className="flex items-center gap-4">
+                <div className={`p-3 rounded-lg ${theme === 'dark' ? 'bg-blue-900/30' : 'bg-blue-50'}`}>
+                  <Factory className={`w-6 h-6 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`} />
+                </div>
+                <div>
+                  <h2 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
+                    {selectedMachine.name}
+                  </h2>
+                  <p className={`text-sm ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
+                    {selectedMachine.type}
+                  </p>
+                </div>
               </div>
-              <button onClick={() => setShowMachineDetail(false)} className={`${theme === 'dark' ? 'text-slate-400 hover:text-slate-200' : 'text-slate-400 hover:text-slate-600'}`}><X className="w-6 h-6" /></button>
+              <button 
+                onClick={() => setShowMachineDetail(false)} 
+                className={`p-2 rounded-full hover:bg-slate-100 transition ${theme === 'dark' ? 'text-slate-400 hover:bg-slate-700' : 'text-slate-400'}`}
+              >
+                <X className="w-6 h-6" />
+              </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-               <div className="grid grid-cols-4 gap-4">
-                 <div className="p-4 bg-slate-100 rounded">Health: {selectedMachine.health}%</div>
-                 <div className="p-4 bg-slate-100 rounded">RUL: {selectedMachine.rul} days</div>
-               </div>
+
+            {/* 2. Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+              
+              {/* Row 1: Key Metrics */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {/* Health Score */}
+                <div className={`p-4 rounded-xl shadow-sm ${theme === 'dark' ? 'bg-slate-800' : 'bg-white'}`}>
+                  <p className={`text-xs font-semibold mb-1 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Health Score</p>
+                  <p className={`text-3xl font-bold ${selectedMachine.health >= 80 ? 'text-green-500' : selectedMachine.health >= 60 ? 'text-yellow-500' : 'text-red-500'}`}>
+                    {selectedMachine.health}%
+                  </p>
+                </div>
+                {/* RUL */}
+                <div className={`p-4 rounded-xl shadow-sm ${theme === 'dark' ? 'bg-slate-800' : 'bg-white'}`}>
+                  <p className={`text-xs font-semibold mb-1 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>RUL</p>
+                  <p className="text-3xl font-bold text-blue-600">{selectedMachine.rul}</p>
+                  <p className="text-[10px] text-slate-400">days</p>
+                </div>
+                {/* Operating Hours */}
+                <div className={`p-4 rounded-xl shadow-sm ${theme === 'dark' ? 'bg-slate-800' : 'bg-white'}`}>
+                  <p className={`text-xs font-semibold mb-1 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Operating Hours</p>
+                  <p className="text-3xl font-bold text-purple-600">{selectedMachine.operatingHours.toLocaleString()}</p>
+                  <p className="text-[10px] text-slate-400">hours</p>
+                </div>
+                {/* Status */}
+                <div className={`p-4 rounded-xl shadow-sm ${theme === 'dark' ? 'bg-slate-800' : 'bg-white'}`}>
+                  <p className={`text-xs font-semibold mb-1 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Status</p>
+                  <span className={`inline-block px-3 py-1 rounded-full text-sm font-bold capitalize ${
+                    selectedMachine.status === 'good' ? 'bg-green-100 text-green-700' :
+                    selectedMachine.status === 'warning' ? 'bg-yellow-100 text-yellow-700' :
+                    'bg-red-100 text-red-700'
+                  }`}>
+                    {selectedMachine.status}
+                  </span>
+                </div>
+              </div>
+
+              {/* Row 2: Machine Information */}
+              <div className={`p-5 rounded-xl shadow-sm ${theme === 'dark' ? 'bg-slate-800' : 'bg-white'}`}>
+                <h3 className={`text-sm font-bold mb-4 ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>Machine Information</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                  <div>
+                    <p className={`text-xs mb-1 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Machine Type</p>
+                    <p className={`font-medium ${theme === 'dark' ? 'text-slate-200' : 'text-slate-900'}`}>{selectedMachine.type}</p>
+                  </div>
+                  <div>
+                    <p className={`text-xs mb-1 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Install Date</p>
+                    <p className={`font-medium ${theme === 'dark' ? 'text-slate-200' : 'text-slate-900'}`}>{selectedMachine.installDate}</p>
+                  </div>
+                  <div>
+                    <p className={`text-xs mb-1 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Last Maintenance</p>
+                    <p className={`font-medium ${theme === 'dark' ? 'text-slate-200' : 'text-slate-900'}`}>{selectedMachine.lastMaintenance}</p>
+                  </div>
+                  <div>
+                    <p className={`text-xs mb-1 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Failure Probability (30d)</p>
+                    <p className={`font-medium ${theme === 'dark' ? 'text-slate-200' : 'text-slate-900'}`}>2%</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 3: Sensor Data */}
+              <div>
+                <h3 className={`text-sm font-bold mb-3 ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>Sensor Data</h3>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  {Object.entries(selectedMachine.sensors).map(([key, data]) => (
+                    <div key={key} className={`p-4 rounded-xl shadow-sm border-l-4 ${theme === 'dark' ? 'bg-slate-800' : 'bg-white'} ${
+                      data.status === 'normal' ? 'border-l-green-500' : 'border-l-red-500'
+                    }`}>
+                      <p className={`text-xs font-semibold capitalize mb-1 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>{key}</p>
+                      <div className="flex items-baseline gap-1">
+                        <span className={`text-2xl font-bold ${theme === 'dark' ? 'text-slate-200' : 'text-slate-900'}`}>{data.value}</span>
+                        <span className="text-xs text-slate-400">{data.unit || ''}</span>
+                      </div>
+                      <span className={`mt-2 inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                        data.status === 'normal' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                      }`}>
+                        {data.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Row 4: Maintenance History */}
+              <div>
+                <h3 className={`text-sm font-bold mb-3 ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>Maintenance History</h3>
+                <div className={`rounded-xl shadow-sm overflow-hidden ${theme === 'dark' ? 'bg-slate-800' : 'bg-white'}`}>
+                  {selectedMachine.maintenanceHistory.map((item, idx) => (
+                    <div key={idx} className={`p-4 flex items-center justify-between border-b last:border-0 ${theme === 'dark' ? 'border-slate-700' : 'border-slate-100'}`}>
+                      <div className="flex items-center gap-4">
+                        <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-50 text-blue-600'}`}>
+                          <Settings className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <p className={`text-sm font-bold ${theme === 'dark' ? 'text-slate-200' : 'text-slate-900'}`}>{item.type}</p>
+                          <p className={`text-xs ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>{item.date}</p>
+                        </div>
+                      </div>
+                      <span className={`text-sm font-medium ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
+                        ${item.cost.toLocaleString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Row 5: Recommendations */}
+              <div className={`p-4 rounded-xl border ${theme === 'dark' ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200'}`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <Activity className={`w-5 h-5 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`} />
+                  <h3 className={`text-sm font-bold ${theme === 'dark' ? 'text-blue-300' : 'text-blue-800'}`}>Recommendations</h3>
+                </div>
+                <div className="space-y-1 pl-7">
+                  <div className="flex items-center gap-2">
+                    <Check className={`w-4 h-4 ${theme === 'dark' ? 'text-green-400' : 'text-green-600'}`} />
+                    <p className={`text-sm ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>Continue routine maintenance</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className={`w-4 h-4 ${theme === 'dark' ? 'text-green-400' : 'text-green-600'}`} />
+                    <p className={`text-sm ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>Machine condition is optimal</p>
+                  </div>
+                </div>
+              </div>
+
             </div>
-            <div className={`p-6 ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'} border-t flex justify-end`}>
-               <button onClick={() => setShowMachineDetail(false)} className="px-6 py-2 border rounded-lg">{currentLang.close}</button>
+
+            {/* 3. Footer Actions */}
+            <div className={`px-6 py-4 border-t flex justify-between items-center ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
+              <button className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition ${theme === 'dark' ? 'bg-slate-700 text-slate-300 hover:bg-slate-600' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>
+                <Download className="w-4 h-4" />
+                {currentLang.exportReport}
+              </button>
+              
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => handleOpenSchedule(selectedMachine, 'inspection')}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm transition"
+                >
+                  <Calendar className="w-4 h-4" />
+                  {currentLang.scheduleMaintenance}
+                </button>
+                <button 
+                  onClick={() => setShowMachineDetail(false)} 
+                  className={`px-4 py-2 rounded-lg text-sm font-medium border transition ${theme === 'dark' ? 'border-slate-600 text-slate-300 hover:bg-slate-700' : 'border-slate-300 text-slate-700 hover:bg-slate-50'}`}
+                >
+                  {currentLang.close}
+                </button>
+              </div>
             </div>
+
           </div>
         </div>
       )}
@@ -1692,6 +1508,7 @@ const Dashboard = ({ onLogout }) => {
           </div>
         </div>
       )}
+
       {showSuccessMessage && (
         <div className="fixed top-20 right-6 bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center space-x-3 z-50">
           <CheckCircle className="w-6 h-6" />
@@ -1702,40 +1519,6 @@ const Dashboard = ({ onLogout }) => {
     </div>
   );
 };
-
-
-// --- Helper Components ---
-
-// 1. Metric Card Helper
-const MetricCard = ({ theme, label, value, labelColor, valueColor }) => (
-  <div className={`rounded-xl p-4 flex flex-col justify-center border shadow-lg ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
-    <p className={`text-sm font-medium ${labelColor}`}>{label}</p>
-    <p className={`text-3xl font-bold mt-1 ${valueColor}`}>{value}</p>
-  </div>
-);
-
-// 2. Custom Legend Item Helper (รองรับ Theme)
-const CustomLegendItem = ({ label, color, theme }) => (
-  <div className="flex items-center gap-2.5 group cursor-default">
-    <div className="relative flex items-center justify-center w-8 h-4">
-      <div className="absolute w-full h-[2px] rounded-full opacity-60 transition-opacity group-hover:opacity-100" style={{ backgroundColor: color }}></div>
-      <div className={`absolute w-2.5 h-2.5 rounded-full border-[2px] z-10 ${theme === 'dark' ? 'bg-slate-800' : 'bg-white'}`} style={{ borderColor: color }}></div>
-    </div>
-    <span className={`text-sm font-medium transition-opacity group-hover:opacity-100 opacity-90 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>
-      {label}
-    </span>
-  </div>
-);
-
-// 3. Clean Info Row Helper (รองรับ Theme)
-const CleanInfoRow = ({ theme, label, value, valueColor, boldValue }) => (
-  <div className={`flex justify-between items-center py-2 border-b last:border-0 ${theme === 'dark' ? 'border-slate-700/50' : 'border-slate-100'}`}>
-    <span className={`font-medium ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>{label}:</span>
-    <span className={`${boldValue ? 'font-bold' : 'font-medium'} ${valueColor ? valueColor : (theme === 'dark' ? 'text-slate-200' : 'text-slate-700')}`}>
-      {value}
-    </span>
-  </div>
-);
 
 // --- App Component ---
 const App = () => {
