@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars */
 import React, {useState} from 'react';
 import { TrendingUp, AlertTriangle, Activity, Settings, Calendar, Package, Factory, Cpu, 
   Bell, ChevronRight, CheckCircle, XCircle, Clock, X, User, LogOut, Shield, 
