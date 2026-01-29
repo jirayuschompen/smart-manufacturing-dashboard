@@ -44,16 +44,22 @@ const generateDailyData = () => {
   return data;
 };
 
+// ฟังก์ชันเวลาของ Production Efficiency รายชม.
 const generateHourlyOEE = () => {
   const data = [];
-  for (let i = 0; i < 24; i++) {
+  // แก้ไขลูปให้เริ่มที่ 7 (07:00) และจบที่ 16 (16:00)
+  for (let i = 7; i <= 16; i++) {
     const hour = i.toString().padStart(2, '0') + ':00';
     let oee = 0;
-    if (i < 6) oee = 0;
-    else if (i === 12) oee = 45;
-    else if (i > 17 && i <= 20) oee = 75;
-    else if (i > 20) oee = 0;
-    else oee = 85 + Math.floor(Math.random() * 10);
+
+    // ช่วงพักเที่ยง (12:00) ให้ค่า OEE ต่ำลงเหมือนเดิม
+    if (i === 12) {
+      oee = 45;
+    } else {
+      // ช่วงเวลาทำงานปกติ (07:00-11:00 และ 13:00-16:00) สุ่มค่า OEE สูง (85-95)
+      oee = 85 + Math.floor(Math.random() * 10);
+    }
+    
     data.push({ label: hour, oee: oee });
   }
   return data;
@@ -150,6 +156,18 @@ const Dashboard = ({ onLogout }) => {
       { label: '2025', actual: 0, forecast: 21000, upper: 23500, lower: 19000 }
     ]
   };
+
+  // State สำหรับหน้า Predictive Analysis
+  const [analysisParams, setAnalysisParams] = useState({
+    type: 'full', // full, critical, custom
+    horizon: '7',
+    options: {
+      anomaly: true,
+      maintenance: true,
+      cost: true,
+      report: true
+    }
+  });
 
   // Translation object
   const t = {
@@ -412,6 +430,7 @@ const Dashboard = ({ onLogout }) => {
         { date: '2024-01-05', type: 'Lubrication', cost: 800 }
       ]
     },
+
     { 
       name: 'Inverter102', 
       health: 92, 
@@ -432,6 +451,7 @@ const Dashboard = ({ onLogout }) => {
         { date: '2024-04-12', type: 'Calibration', cost: 2100 }
       ]
     },
+
     { 
       name: 'Irradiation101', 
       health: 88, 
@@ -452,6 +472,7 @@ const Dashboard = ({ onLogout }) => {
         { date: '2024-04-01', type: 'Seal Replacement', cost: 4200 }
       ]
     },
+
     { 
       name: 'Irradiation201', 
       health: 58, 
@@ -472,6 +493,7 @@ const Dashboard = ({ onLogout }) => {
         { date: '2024-02-18', type: 'Routine Inspection', cost: 1200 }
       ]
     },
+
     { 
       name: 'Inverter103', 
       health: 85, 
@@ -492,6 +514,7 @@ const Dashboard = ({ onLogout }) => {
         { date: '2024-05-01', type: 'Calibration', cost: 1500 }
       ]
     },
+    
     { 
       name: 'Inverter104', 
       health: 78, 
@@ -1118,27 +1141,315 @@ const Dashboard = ({ onLogout }) => {
       )}
 
       {/* Analysis Modal */}
+      {/* Analysis Modal (Updated UI) */}
       {showAnalysisModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-2xl w-full shadow-2xl">
-            <div className="p-6 border-b border-slate-200 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-slate-800">Run Predictive Analysis</h2>
-              <button onClick={() => setShowAnalysisModal(false)} className="text-slate-400 hover:text-slate-600"><X className="w-6 h-6" /></button>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-in fade-in duration-200">
+          <div className={`${theme === 'dark' ? 'bg-[#1e293b]' : 'bg-white'} rounded-xl w-full shadow-2xl overflow-hidden`} style={{ maxWidth: '650px' }}>
+            
+            {/* Header */}
+            <div className={`px-6 py-4 border-b flex items-center justify-between ${theme === 'dark' ? 'border-slate-700' : 'border-slate-100'}`}>
+              <h2 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
+                Run Predictive Analysis
+              </h2>
+              <button 
+                onClick={() => setShowAnalysisModal(false)} 
+                className={`p-1 rounded-full hover:bg-slate-100 transition ${theme === 'dark' ? 'text-slate-400 hover:bg-slate-700' : 'text-slate-400'}`}
+              >
+                <X className="w-6 h-6" />
+              </button>
             </div>
+
+            {/* Body */}
             <div className="p-6 space-y-6">
-               <p className="text-slate-600">Select analysis parameters...</p>
+              
+              {/* 1. Analysis Type */}
+              <div>
+                <label className={`block text-sm font-semibold mb-3 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>Analysis Type</label>
+                <div className="space-y-3">
+                  {/* Option 1 */}
+                  <label className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${
+                    analysisParams.type === 'full' 
+                      ? (theme === 'dark' ? 'border-blue-500 bg-blue-900/20' : 'border-blue-500 bg-blue-50') 
+                      : (theme === 'dark' ? 'border-slate-600 hover:border-slate-500' : 'border-slate-200 hover:border-blue-300')
+                  }`}>
+                    <div className="flex items-center gap-3">
+                      <input 
+                        type="radio" 
+                        name="analysisType" 
+                        checked={analysisParams.type === 'full'} 
+                        onChange={() => setAnalysisParams({...analysisParams, type: 'full'})}
+                        className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                      />
+                      <span className={`text-sm font-medium ${theme === 'dark' ? 'text-slate-200' : 'text-slate-700'}`}>Full System Analysis (All Machines)</span>
+                    </div>
+                    <span className={`text-xs ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>~4 min</span>
+                  </label>
+
+                  {/* Option 2 */}
+                  <label className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${
+                    analysisParams.type === 'critical' 
+                      ? (theme === 'dark' ? 'border-blue-500 bg-blue-900/20' : 'border-blue-500 bg-blue-50') 
+                      : (theme === 'dark' ? 'border-slate-600 hover:border-slate-500' : 'border-slate-200 hover:border-blue-300')
+                  }`}>
+                    <div className="flex items-center gap-3">
+                      <input 
+                        type="radio" 
+                        name="analysisType" 
+                        checked={analysisParams.type === 'critical'} 
+                        onChange={() => setAnalysisParams({...analysisParams, type: 'critical'})}
+                        className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                      />
+                      <span className={`text-sm font-medium ${theme === 'dark' ? 'text-slate-200' : 'text-slate-700'}`}>Critical Machines Only</span>
+                    </div>
+                    <span className={`text-xs ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>~2 min</span>
+                  </label>
+
+                  {/* Option 3 */}
+                  <label className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${
+                    analysisParams.type === 'custom' 
+                      ? (theme === 'dark' ? 'border-blue-500 bg-blue-900/20' : 'border-blue-500 bg-blue-50') 
+                      : (theme === 'dark' ? 'border-slate-600 hover:border-slate-500' : 'border-slate-200 hover:border-blue-300')
+                  }`}>
+                    <div className="flex items-center gap-3">
+                      <input 
+                        type="radio" 
+                        name="analysisType" 
+                        checked={analysisParams.type === 'custom'} 
+                        onChange={() => setAnalysisParams({...analysisParams, type: 'custom'})}
+                        className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                      />
+                      <span className={`text-sm font-medium ${theme === 'dark' ? 'text-slate-200' : 'text-slate-700'}`}>Custom Selection</span>
+                    </div>
+                    <span className={`text-xs ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Variable</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* 2. Prediction Horizon */}
+              <div>
+                <label className={`block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>Prediction Horizon</label>
+                <select 
+                  value={analysisParams.horizon}
+                  onChange={(e) => setAnalysisParams({...analysisParams, horizon: e.target.value})}
+                  className={`w-full px-4 py-2.5 rounded-lg border outline-none appearance-none transition ${
+                    theme === 'dark' ? 'bg-slate-800 border-slate-600 text-white focus:border-blue-500' : 'bg-white border-slate-300 text-slate-900 focus:border-blue-500'
+                  }`}
+                >
+                  <option value="7">Next 7 days</option>
+                  <option value="14">Next 14 days</option>
+                  <option value="30">Next 30 days</option>
+                  <option value="90">Next 3 months</option>
+                </select>
+              </div>
+
+              {/* 3. Analysis Options */}
+              <div>
+                <label className={`block text-sm font-semibold mb-3 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>Analysis Options</label>
+                <div className="space-y-3">
+                  {[
+                    { key: 'anomaly', label: 'Include anomaly detection' },
+                    { key: 'maintenance', label: 'Generate maintenance recommendations' },
+                    { key: 'cost', label: 'Calculate cost impact' },
+                    { key: 'report', label: 'Export detailed report (PDF)' },
+                  ].map((opt) => (
+                    <label key={opt.key} className="flex items-center gap-3 cursor-pointer group">
+                      <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
+                        analysisParams.options[opt.key] 
+                          ? 'bg-blue-600 border-blue-600' 
+                          : theme === 'dark' ? 'border-slate-500 bg-slate-800' : 'border-gray-300 bg-white'
+                      }`}>
+                        {analysisParams.options[opt.key] && <CheckCircle className="w-3.5 h-3.5 text-white" />}
+                        <input 
+                          type="checkbox" 
+                          className="hidden"
+                          checked={analysisParams.options[opt.key]}
+                          onChange={(e) => setAnalysisParams({
+                            ...analysisParams, 
+                            options: { ...analysisParams.options, [opt.key]: e.target.checked }
+                          })}
+                        />
+                      </div>
+                      <span className={`text-sm ${theme === 'dark' ? 'text-slate-300 group-hover:text-white' : 'text-slate-600 group-hover:text-slate-900'}`}>
+                        {opt.label}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
             </div>
-            <div className="p-6 border-t border-slate-200 flex justify-end space-x-3">
-              <button onClick={() => setShowAnalysisModal(false)} className="px-6 py-2 border border-slate-300 rounded-lg text-slate-700">Cancel</button>
-              <button onClick={handleRunAnalysis} className="px-6 py-2 bg-blue-600 text-white rounded-lg">Run Analysis</button>
+
+            {/* Footer Buttons */}
+            <div className={`px-6 py-4 border-t flex justify-end gap-3 ${theme === 'dark' ? 'border-slate-700 bg-slate-800/50' : 'border-slate-100 bg-slate-50'}`}>
+              <button 
+                onClick={() => setShowAnalysisModal(false)} 
+                className={`px-6 py-2.5 rounded-lg text-sm font-medium border transition ${
+                  theme === 'dark' ? 'border-slate-600 text-slate-300 hover:bg-slate-700' : 'border-slate-300 text-slate-600 hover:bg-white hover:shadow-sm'
+                }`}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleRunAnalysis} 
+                className="px-6 py-2.5 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 shadow-md transition hover:shadow-lg hover:-translate-y-0.5"
+              >
+                Run Analysis
+              </button>
             </div>
+
+          </div>
+        </div>
+      )}
+      
+      {/* Analysis Modal (Updated UI) */}
+      {showAnalysisModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-in fade-in duration-200">
+          <div className={`${theme === 'dark' ? 'bg-[#1e293b]' : 'bg-white'} rounded-xl w-full shadow-2xl overflow-hidden`} style={{ maxWidth: '650px' }}>
+            
+            {/* Header */}
+            <div className={`px-6 py-4 border-b flex items-center justify-between ${theme === 'dark' ? 'border-slate-700' : 'border-slate-100'}`}>
+              <h2 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
+                Run Predictive Analysis
+              </h2>
+              <button 
+                onClick={() => setShowAnalysisModal(false)} 
+                className={`p-1 rounded-full hover:bg-slate-100 transition ${theme === 'dark' ? 'text-slate-400 hover:bg-slate-700' : 'text-slate-400'}`}
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-6">
+              
+              {/* 1. Analysis Type */}
+              <div>
+                <label className={`block text-sm font-semibold mb-3 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Analysis Type
+                </label>
+                <div className="space-y-3">
+                  {[
+                    { id: 'full', label: 'Full System Analysis (All Machines)', time: '~4 min' },
+                    { id: 'critical', label: 'Critical Machines Only', time: '~2 min' },
+                    { id: 'custom', label: 'Custom Selection', time: 'Variable' }
+                  ].map((option) => (
+                    <div
+                      key={option.id}
+                      onClick={() => setAnalysisParams({ ...analysisParams, type: option.id })}
+                      className={`relative flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ease-in-out ${
+                        analysisParams.type === option.id
+                          ? (theme === 'dark' ? 'border-blue-500 bg-blue-900/30' : 'border-blue-600 bg-blue-50')
+                          : (theme === 'dark' ? 'border-slate-700 hover:border-slate-600 bg-slate-800' : 'border-slate-200 hover:border-blue-300 bg-white')
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        {/* Custom Radio Circle */}
+                        <div className={`flex items-center justify-center w-5 h-5 rounded-full border transition-all duration-200 ${
+                          analysisParams.type === option.id
+                            ? 'border-blue-600 bg-blue-600'
+                            : (theme === 'dark' ? 'border-slate-500 bg-transparent' : 'border-slate-300 bg-white')
+                        }`}>
+                          {analysisParams.type === option.id && (
+                            <div className="w-2 h-2 bg-white rounded-full shadow-sm" />
+                          )}
+                        </div>
+                        
+                        <span className={`font-medium ${theme === 'dark' ? 'text-slate-200' : 'text-slate-700'}`}>
+                          {option.label}
+                        </span>
+                      </div>
+                      
+                      <span className={`text-xs font-medium px-2 py-1 rounded-md ${
+                        theme === 'dark' 
+                          ? 'bg-slate-700 text-slate-400' 
+                          : 'bg-slate-100 text-slate-500'
+                      }`}>
+                        {option.time}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 2. Prediction Horizon */}
+              <div>
+                <label className={`block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>Prediction Horizon</label>
+                <select 
+                  value={analysisParams.horizon}
+                  onChange={(e) => setAnalysisParams({...analysisParams, horizon: e.target.value})}
+                  className={`w-full px-4 py-2.5 rounded-lg border outline-none appearance-none transition ${
+                    theme === 'dark' ? 'bg-slate-800 border-slate-600 text-white focus:border-blue-500' : 'bg-white border-slate-300 text-slate-900 focus:border-blue-500'
+                  }`}
+                >
+                  <option value="7">Next 7 days</option>
+                  <option value="14">Next 14 days</option>
+                  <option value="30">Next 30 days</option>
+                  <option value="90">Next 3 months</option>
+                </select>
+              </div>
+
+              {/* 3. Analysis Options */}
+              <div>
+                <label className={`block text-sm font-semibold mb-3 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>Analysis Options</label>
+                <div className="space-y-3">
+                  {[
+                    { key: 'anomaly', label: 'Include anomaly detection' },
+                    { key: 'maintenance', label: 'Generate maintenance recommendations' },
+                    { key: 'cost', label: 'Calculate cost impact' },
+                    { key: 'report', label: 'Export detailed report (PDF)' },
+                  ].map((opt) => (
+                    <label key={opt.key} className="flex items-center gap-3 cursor-pointer group">
+                      <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
+                        analysisParams.options[opt.key] 
+                          ? 'bg-blue-600 border-blue-600' 
+                          : theme === 'dark' ? 'border-slate-500 bg-slate-800' : 'border-gray-300 bg-white'
+                      }`}>
+                        {analysisParams.options[opt.key] && <CheckCircle className="w-3.5 h-3.5 text-white" />}
+                        <input 
+                          type="checkbox" 
+                          className="hidden"
+                          checked={analysisParams.options[opt.key]}
+                          onChange={(e) => setAnalysisParams({
+                            ...analysisParams, 
+                            options: { ...analysisParams.options, [opt.key]: e.target.checked }
+                          })}
+                        />
+                      </div>
+                      <span className={`text-sm ${theme === 'dark' ? 'text-slate-300 group-hover:text-white' : 'text-slate-600 group-hover:text-slate-900'}`}>
+                        {opt.label}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+
+            {/* Footer Buttons */}
+            <div className={`px-6 py-4 border-t flex justify-end gap-3 ${theme === 'dark' ? 'border-slate-700 bg-slate-800/50' : 'border-slate-100 bg-slate-50'}`}>
+              <button 
+                onClick={() => setShowAnalysisModal(false)} 
+                className={`px-6 py-2.5 rounded-lg text-sm font-medium border transition ${
+                  theme === 'dark' ? 'border-slate-600 text-slate-300 hover:bg-slate-700' : 'border-slate-300 text-slate-600 hover:bg-white hover:shadow-sm'
+                }`}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleRunAnalysis} 
+                className="px-6 py-2.5 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 shadow-md transition hover:shadow-lg hover:-translate-y-0.5"
+              >
+                Run Analysis
+              </button>
+            </div>
+
           </div>
         </div>
       )}
 
       {/* Schedule Modal */}
       {showScheduleModal && selectedMachine && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-in fade-in duration-200">
           <div className={`${theme === 'dark' ? 'bg-[#1e293b]' : 'bg-white'} rounded-xl w-full shadow-2xl overflow-hidden`} style={{ maxWidth: '600px' }}>
             
             {/* Header */}
@@ -1293,24 +1604,25 @@ const Dashboard = ({ onLogout }) => {
                 {currentLang.cancel}
               </button>
               
-              {/* ปุ่ม Confirm Schedule พร้อม Logic การ Disable */}
               <button 
                 onClick={handleScheduleSubmit} 
-                disabled={!scheduleForm.technician || !scheduleForm.time} // เงื่อนไข: ต้องมี Technician และ Time
+                disabled={!scheduleForm.technician || !scheduleForm.time}
                 className={`px-6 py-2 rounded-lg text-sm font-medium shadow-md transition-all ${
                   !scheduleForm.technician || !scheduleForm.time
-                    ? 'opacity-50 cursor-not-allowed' // สไตล์เมื่อ Disabled
-                    : 'hover:shadow-lg hover:-translate-y-0.5' // สไตล์เมื่อ Enabled
+                    ? 'opacity-50 cursor-not-allowed'
+                    : 'hover:shadow-lg hover:-translate-y-0.5'
                 } ${
                    theme === 'dark' ? 'bg-slate-600 text-white' : ''
                 }`}
-                // ใช้ style ใน Light Mode ตามเดิม (แต่ถ้า Disabled จะจางลงด้วย opacity)
-                style={theme === 'dark' ? {} : { backgroundColor: '#b4c4d6', color: '#475569' }}
+                style={
+                  !scheduleForm.technician || !scheduleForm.time
+                    ? (theme === 'dark' ? {} : { backgroundColor: '#b4c4d6', color: '#475569' }) // Disabled Style
+                    : (theme === 'dark' ? {} : { backgroundColor: '#2563eb', color: '#fff' })     // Enabled Style (Blue)
+                }
               >
                 {currentLang.confirmSchedule}
               </button>
             </div>
-
           </div>
         </div>
       )}

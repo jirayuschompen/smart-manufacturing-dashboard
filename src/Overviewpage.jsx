@@ -186,7 +186,7 @@ const Overview = ({
               <div className={`flex rounded-lg border ${theme === 'dark' ? 'border-slate-600 bg-slate-700' : 'border-slate-200 bg-slate-50'} p-0.5`}>
                 {['daily', 'weekly', 'monthly', 'yearly'].map((period) => (
                   <button key={period} onClick={() => setProductionPeriod(period)} className={`px-2 py-0.5 text-[10px] font-medium rounded-md transition-all ${productionPeriod === period ? (theme === 'dark' ? 'bg-slate-600 text-white shadow-sm' : 'bg-white text-blue-600 shadow-sm border border-slate-200') : (theme === 'dark' ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-700')}`}>
-                     {period === 'daily' ? 'Day' : period === 'weekly' ? 'Week' : period === 'monthly' ? 'Month' : 'Year'}
+                      {period === 'daily' ? 'Day' : period === 'weekly' ? 'Week' : period === 'monthly' ? 'Month' : 'Year'}
                   </button>
                 ))}
               </div>
@@ -198,7 +198,19 @@ const Overview = ({
                   <XAxis dataKey="label" stroke="#94a3b8" tick={{fontSize: 10}} axisLine={false} tickLine={false} dy={10} />
                   <YAxis stroke="#94a3b8" tick={{fontSize: 10}} axisLine={false} tickLine={false} domain={[0, 100]} />
                   <Tooltip contentStyle={{ backgroundColor: theme === 'dark' ? '#1e293b' : '#fff', borderColor: theme === 'dark' ? '#334155' : '#e2e8f0', borderRadius: '8px', fontSize: '12px' }} cursor={{fill: theme === 'dark' ? '#334155' : '#f1f5f9', opacity: 0.4}} />
-                  <Bar dataKey="oee" fill="#3b82f6" name="OEE %" radius={[4, 4, 0, 0]} barSize={productionPeriod === 'yearly' ? 60 : 25} />
+                  
+                  {/* แก้ไขตรงนี้: เพิ่มเงื่อนไข productionPeriod === 'daily' ให้กว้างขึ้น (เช่น 50) */}
+                  <Bar 
+                    dataKey="oee" 
+                    fill="#3b82f6" 
+                    name="OEE %" 
+                    radius={[4, 4, 0, 0]} 
+                    barSize={
+                      productionPeriod === 'yearly' ? 60 : 
+                      productionPeriod === 'daily' ? 50 : 25
+                    } 
+                  />
+
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -310,10 +322,17 @@ const Overview = ({
 
           {/* Machine Health List */}
           <div className={`h-[300px] lg:h-auto lg:flex-1 ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} rounded-xl shadow-sm border flex flex-col min-h-0 overflow-hidden`}>
+            
+            {/* Header */}
             <div className={`p-3 border-b ${theme === 'dark' ? 'border-slate-700' : 'border-slate-100'} flex-none flex items-center gap-2`}>
-              <div className="p-1.5 bg-blue-100 rounded-md"><Activity className="w-4 h-4 text-blue-600" /></div>
+              {/* แก้ไข 1: ปรับสีพื้นหลังและสีไอคอนให้รองรับ Dark Mode */}
+              <div className={`p-1.5 rounded-md ${theme === 'dark' ? 'bg-blue-900/30' : 'bg-blue-100'}`}>
+                <Activity className={`w-4 h-4 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`} />
+              </div>
               <h3 className={`font-semibold text-sm ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{currentLang.machineHealth}</h3>
             </div>
+
+            {/* List Body */}
             <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar">
               {machineHealth.map((machine, idx) => (
                 <div key={idx} onClick={() => {setSelectedMachine(machine); setShowMachineDetail(true);}} className={`flex items-center justify-between p-2 rounded-lg border ${theme === 'dark' ? 'bg-slate-700 border-slate-600 hover:bg-slate-600' : 'bg-slate-50 border-slate-100 hover:bg-white hover:shadow-sm hover:border-blue-200'} transition cursor-pointer`}>
@@ -323,7 +342,10 @@ const Overview = ({
                         <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" fill="transparent" className={`${theme === 'dark' ? 'text-slate-600' : 'text-slate-200'}`} />
                         <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" fill="transparent" strokeDasharray={63} strokeDashoffset={63 - (63 * machine.health) / 100} className={`${machine.health >= 80 ? 'text-green-500' : machine.health >= 60 ? 'text-yellow-500' : 'text-red-500'}`} />
                       </svg>
-                      <span className="absolute text-[7px] font-bold">{machine.health}</span>
+                      {/* แก้ไข 2: เพิ่มเงื่อนไขสีตัวเลข ให้เป็นสีขาวใน Dark Mode */}
+                      <span className={`absolute text-[7px] font-bold ${theme === 'dark' ? 'text-slate-100' : 'text-slate-800'}`}>
+                        {machine.health}
+                      </span>
                     </div>
                     <div className="min-w-0">
                       <p className={`text-[11px] font-bold ${theme === 'dark' ? 'text-slate-200' : 'text-slate-700'} truncate`}>{machine.name}</p>
@@ -337,172 +359,171 @@ const Overview = ({
               ))}
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* --- All Alerts Modal --- */}
-      {showAllAlerts && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-                <div className={`w-full max-w-4xl h-[85vh] rounded-xl shadow-2xl flex flex-col ${theme === 'dark' ? 'bg-[#1e293b]' : 'bg-white'} zoom-in-95 duration-200`}>
-                  
-                  {/* 1. Header: Title & Close Button */}
-                  <div className={`p-4 border-b flex justify-between items-center ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>
-                    <div className="flex items-center gap-3">
-                      <Bell className="w-6 h-6 text-blue-600" />
-                      <div>
-                        <h2 className={`text-lg font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{currentLang.allAlerts}</h2>
-                        <p className={`text-xs ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
-                          {alerts.length} items ({unreadCount} unread)
-                        </p>
-                      </div>
-                    </div>
+          {/* --- All Alerts Modal --- */}
+          {showAllAlerts && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className={`w-full max-w-4xl h-[85vh] rounded-xl shadow-2xl flex flex-col ${theme === 'dark' ? 'bg-[#1e293b]' : 'bg-white'} zoom-in-95 duration-200`}>
+              
+              {/* 1. Header: Title & Close Button */}
+              <div className={`p-4 border-b flex justify-between items-center ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>
+                <div className="flex items-center gap-3">
+                  <Bell className="w-6 h-6 text-blue-600" />
+                  <div>
+                    <h2 className={`text-lg font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{currentLang.allAlerts}</h2>
+                    <p className={`text-xs ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
+                      {alerts.length} items ({unreadCount} unread)
+                    </p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowAllAlerts(false)}
+                  className={`p-1.5 rounded-full hover:bg-slate-100 transition ${theme === 'dark' ? 'text-slate-400 hover:bg-slate-700' : 'text-slate-400'}`}
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* 2. Controls: Search, Filters, Actions */}
+              <div className="p-4 space-y-4">
+                {/* Search Bar */}
+                <div className={`flex items-center px-3 py-2 rounded-lg border ${theme === 'dark' ? 'bg-slate-800 border-slate-600' : 'bg-white border-slate-300'}`}>
+                  <Search className="w-5 h-5 text-slate-400 mr-2" />
+                  <input 
+                    type="text" 
+                    placeholder={currentLang.searchAlerts} 
+                    className={`bg-transparent outline-none w-full text-sm ${theme === 'dark' ? 'text-white placeholder:text-slate-500' : 'text-slate-800'}`}
+                    value={alertSearch}
+                    onChange={(e) => setAlertSearch(e.target.value)}
+                  />
+                </div>
+
+                {/* Filters & Action Buttons */}
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap gap-2">
+                    {['All', 'Unread', 'Read', 'critical', 'High', 'Medium', 'Low'].map(filter => (
+                      <button
+                        key={filter}
+                        onClick={() => setAlertFilter(filter.toLowerCase())}
+                        className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${
+                          alertFilter === filter.toLowerCase()
+                            ? 'bg-blue-600 text-white shadow-sm'
+                            : theme === 'dark' ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        {filter}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
                     <button 
-                      onClick={() => setShowAllAlerts(false)}
-                      className={`p-1.5 rounded-full hover:bg-slate-100 transition ${theme === 'dark' ? 'text-slate-400 hover:bg-slate-700' : 'text-slate-400'}`}
+                      onClick={markAllAsRead}
+                      className={`px-3 py-1.5 rounded-md text-xs font-medium border transition ${theme === 'dark' ? 'border-slate-600 text-slate-300 hover:bg-slate-700' : 'border-slate-300 text-slate-600 hover:bg-slate-50'}`}
                     >
-                      <X className="w-5 h-5" />
+                      {currentLang.markAllRead}
+                    </button>
+                    <button 
+                      onClick={deleteAllAlerts}
+                      className="px-3 py-1.5 rounded-md text-xs font-medium bg-red-600 text-white hover:bg-red-700 transition shadow-sm"
+                    >
+                      {currentLang.deleteAll}
                     </button>
                   </div>
-      
-                  {/* 2. Controls: Search, Filters, Actions */}
-                  <div className="p-4 space-y-4">
-                    {/* Search Bar */}
-                    <div className={`flex items-center px-3 py-2 rounded-lg border ${theme === 'dark' ? 'bg-slate-800 border-slate-600' : 'bg-white border-slate-300'}`}>
-                      <Search className="w-5 h-5 text-slate-400 mr-2" />
-                      <input 
-                        type="text" 
-                        placeholder={currentLang.searchAlerts} 
-                        className={`bg-transparent outline-none w-full text-sm ${theme === 'dark' ? 'text-white placeholder:text-slate-500' : 'text-slate-800'}`}
-                        value={alertSearch}
-                        onChange={(e) => setAlertSearch(e.target.value)}
-                      />
-                    </div>
-      
-                    {/* Filters & Action Buttons */}
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div className="flex flex-wrap gap-2">
-                        {['All', 'Unread', 'Read', 'critical', 'High', 'Medium', 'Low'].map(filter => (
-                          <button
-                            key={filter}
-                            onClick={() => setAlertFilter(filter.toLowerCase())}
-                            className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${
-                              alertFilter === filter.toLowerCase()
-                                ? 'bg-blue-600 text-white shadow-sm'
-                                : theme === 'dark' ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                            }`}
-                          >
-                            {filter}
-                          </button>
-                        ))}
-                      </div>
-                      <div className="flex gap-2">
-                        <button 
-                          onClick={markAllAsRead}
-                          className={`px-3 py-1.5 rounded-md text-xs font-medium border transition ${theme === 'dark' ? 'border-slate-600 text-slate-300 hover:bg-slate-700' : 'border-slate-300 text-slate-600 hover:bg-slate-50'}`}
-                        >
-                          {currentLang.markAllRead}
-                        </button>
-                        <button 
-                          onClick={deleteAllAlerts}
-                          className="px-3 py-1.5 rounded-md text-xs font-medium bg-red-600 text-white hover:bg-red-700 transition shadow-sm"
-                        >
-                          {currentLang.deleteAll}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-      
-                  {/* 3. Alerts List Area */}
-                  <div className={`flex-1 overflow-y-auto px-4 pb-4 space-y-3 custom-scrollbar ${theme === 'dark' ? 'bg-slate-900/50' : 'bg-slate-50'}`}>
-                    {filteredAlerts.length > 0 ? (
-                      filteredAlerts.map((alert) => (
-                        <div key={alert.id} className={`p-4 rounded-xl border shadow-sm flex flex-col md:flex-row gap-4 items-start md:items-center justify-between relative group transition-all ${
-                          theme === 'dark' ? 'bg-white/5 border-slate-700 hover:border-slate-600' : 'bg-white border-slate-200 hover:border-blue-300'
-                        }`}>
-                          
-                          {/* Left Side: Icon & Content */}
-                          <div className="flex items-start gap-4">
-                            {/* Circle Icon Background */}
-                            <div className={`p-2 rounded-full flex-none ${
-                              alert.severity === 'medium' ? 'bg-yellow-100 text-yellow-600' :
-                              alert.severity === 'high' ? 'bg-orange-100 text-orange-600' :
-                              alert.severity === 'critical' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'
-                            }`}>
-                                {getSeverityIcon(alert.severity)}
-                            </div>
-      
-                            {/* Text Content */}
-                            <div>
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className={`font-bold text-sm ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
-                                  {alert.machine}
-                                </span>
-                                {/* Severity Badge */}
-                                <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase ${
-                                  alert.severity === 'critical' ? 'bg-red-100 text-red-700' :
-                                  alert.severity === 'high' ? 'bg-orange-100 text-orange-700' :
-                                  alert.severity === 'medium' ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-100 text-blue-700'
-                                }`}>
-                                  {alert.severity}
-                                </span>
-                                {/* Unread Dot */}
-                                {!alert.read && <span className="w-2 h-2 rounded-full bg-blue-500 ml-1"></span>}
-                              </div>
-                              
-                              <p className={`text-sm ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>
-                                {alert.message}
-                              </p>
-                              
-                              {/* Meta Data Row: Time & Type */}
-                              <div className="flex items-center gap-4 mt-2">
-                                <span className="flex items-center text-xs text-slate-400 gap-1">
-                                  <Clock className="w-3 h-3" /> {alert.time}
-                                </span>
-                                
-                                {/* Type Indicator */}
-                                {alert.type === 'warning' && <span className="flex items-center text-xs text-orange-500 gap-1 font-medium"><AlertTriangle className="w-3 h-3" /> Warning</span>}
-                                {alert.type === 'info' && <span className="flex items-center text-xs text-blue-500 gap-1 font-medium"><Info className="w-3 h-3" /> Info</span>}
-                                {alert.type === 'critical' && <span className="flex items-center text-xs text-red-500 gap-1 font-medium"><div className="w-2 h-2 rounded-full bg-red-500"></div> Critical</span>}
-                              </div>
-                            </div>
-                          </div>
-      
-                          {/* Right Side: Delete Button */}
-                          <button 
-                            onClick={() => deleteAlert(alert.id)}
-                            className={`absolute top-3 right-3 p-1 rounded-full opacity-50 hover:opacity-100 transition ${theme === 'dark' ? 'hover:bg-slate-700 text-white' : 'hover:bg-slate-100 text-slate-500'}`}
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="flex flex-col items-center justify-center h-full text-slate-400 py-12">
-                        <Bell className="w-12 h-12 mb-2 opacity-50" />
-                        <p>{currentLang.noAlertsFound}</p>
-                      </div>
-                    )}
-                  </div>
-      
-                  {/* 4. Footer */}
-                  <div className={`p-4 border-t flex justify-between items-center ${theme === 'dark' ? 'border-slate-700 bg-slate-800/50' : 'border-slate-200 bg-slate-50'}`}>
-                    <span className={`text-xs ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
-                      Showing {filteredAlerts.length} of {alerts.length} items
-                    </span>
-                    <button 
-                      onClick={() => setShowAllAlerts(false)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium border transition ${
-                        theme === 'dark' ? 'border-slate-600 text-slate-300 hover:bg-slate-700' : 'border-slate-300 text-slate-700 hover:bg-white shadow-sm'
-                      }`}
-                    >
-                      {currentLang.close}
-                    </button>
-                  </div>
-      
                 </div>
               </div>
-      )}
 
+              {/* 3. Alerts List Area */}
+              <div className={`flex-1 overflow-y-auto px-4 pb-4 space-y-3 custom-scrollbar ${theme === 'dark' ? 'bg-slate-900/50' : 'bg-slate-50'}`}>
+                {filteredAlerts.length > 0 ? (
+                  filteredAlerts.map((alert) => (
+                    <div key={alert.id} className={`p-4 rounded-xl border shadow-sm flex flex-col md:flex-row gap-4 items-start md:items-center justify-between relative group transition-all ${
+                      theme === 'dark' ? 'bg-white/5 border-slate-700 hover:border-slate-600' : 'bg-white border-slate-200 hover:border-blue-300'
+                    }`}>
+                      
+                      {/* Left Side: Icon & Content */}
+                      <div className="flex items-start gap-4">
+                        {/* Circle Icon Background */}
+                        <div className={`p-2 rounded-full flex-none ${
+                          alert.severity === 'medium' ? 'bg-yellow-100 text-yellow-600' :
+                          alert.severity === 'high' ? 'bg-orange-100 text-orange-600' :
+                          alert.severity === 'critical' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'
+                        }`}>
+                            {getSeverityIcon(alert.severity)}
+                        </div>
+
+                        {/* Text Content */}
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`font-bold text-sm ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
+                              {alert.machine}
+                            </span>
+                            {/* Severity Badge */}
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase ${
+                              alert.severity === 'critical' ? 'bg-red-100 text-red-700' :
+                              alert.severity === 'high' ? 'bg-orange-100 text-orange-700' :
+                              alert.severity === 'medium' ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-100 text-blue-700'
+                            }`}>
+                              {alert.severity}
+                            </span>
+                            {/* Unread Dot */}
+                            {!alert.read && <span className="w-2 h-2 rounded-full bg-blue-500 ml-1"></span>}
+                          </div>
+                          
+                          <p className={`text-sm ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>
+                            {alert.message}
+                          </p>
+                          
+                          {/* Meta Data Row: Time & Type */}
+                          <div className="flex items-center gap-4 mt-2">
+                            <span className="flex items-center text-xs text-slate-400 gap-1">
+                              <Clock className="w-3 h-3" /> {alert.time}
+                            </span>
+                            
+                            {/* Type Indicator */}
+                            {alert.type === 'warning' && <span className="flex items-center text-xs text-orange-500 gap-1 font-medium"><AlertTriangle className="w-3 h-3" /> Warning</span>}
+                            {alert.type === 'info' && <span className="flex items-center text-xs text-blue-500 gap-1 font-medium"><Info className="w-3 h-3" /> Info</span>}
+                            {alert.type === 'critical' && <span className="flex items-center text-xs text-red-500 gap-1 font-medium"><div className="w-2 h-2 rounded-full bg-red-500"></div> Critical</span>}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right Side: Delete Button */}
+                      <button 
+                        onClick={() => deleteAlert(alert.id)}
+                        className={`absolute top-3 right-3 p-1 rounded-full opacity-50 hover:opacity-100 transition ${theme === 'dark' ? 'hover:bg-slate-700 text-white' : 'hover:bg-slate-100 text-slate-500'}`}
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full text-slate-400 py-12">
+                    <Bell className="w-12 h-12 mb-2 opacity-50" />
+                    <p>{currentLang.noAlertsFound}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* 4. Footer */}
+              <div className={`p-4 border-t flex justify-between items-center ${theme === 'dark' ? 'border-slate-700 bg-slate-800/50' : 'border-slate-200 bg-slate-50'}`}>
+                <span className={`text-xs ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Showing {filteredAlerts.length} of {alerts.length} items
+                </span>
+                <button 
+                  onClick={() => setShowAllAlerts(false)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium border transition ${
+                    theme === 'dark' ? 'border-slate-600 text-slate-300 hover:bg-slate-700' : 'border-slate-300 text-slate-700 hover:bg-white shadow-sm'
+                  }`}
+                >
+                  {currentLang.close}
+                </button>
+              </div>
+            </div>
+          </div>
+          )}
+
+        </div>
+      </div>
     </div>
   );
 };
