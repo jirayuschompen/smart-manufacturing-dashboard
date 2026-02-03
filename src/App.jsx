@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import React, {useState} from 'react';
 import { TrendingUp, AlertTriangle, Activity, Settings, Calendar, Package, Factory, Cpu, 
   Bell, ChevronRight, CheckCircle, XCircle, Clock, X, User, LogOut, Shield, 
@@ -78,7 +79,7 @@ const Dashboard = ({ onLogout }) => {
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [language, setLanguage] = useState('en');
-  const [theme, setTheme] = useState('light');
+  const [theme, setTheme] = useState('dark');
   const [selectedMachine, setSelectedMachine] = useState(null);
   const [showMachineDetail, setShowMachineDetail] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
@@ -395,18 +396,18 @@ const Dashboard = ({ onLogout }) => {
     constraints: 'standard'
   });
 
-  const demandData = [
-    { month: 'Jan', actual: 850, forecast: 0, lower: 0, upper: 0 },
-    { month: 'Feb', actual: 920, forecast: 0, lower: 0, upper: 0 },
-    { month: 'Mar', actual: 880, forecast: 0, lower: 0, upper: 0 },
-    { month: 'Apr', actual: 1050, forecast: 0, lower: 0, upper: 0 },
-    { month: 'May', actual: 1100, forecast: 0, lower: 0, upper: 0 },
-    { month: 'Jun', actual: 1080, forecast: 0, lower: 0, upper: 0 },
-    { month: 'Jul', actual: 0, forecast: 1150, lower: 1050, upper: 1250 },
-    { month: 'Aug', actual: 0, forecast: 1200, lower: 1100, upper: 1300 },
-    { month: 'Sep', actual: 0, forecast: 1180, lower: 1080, upper: 1280 },
-    { month: 'Oct', actual: 0, forecast: 1250, lower: 1150, upper: 1350 },
-  ];
+  // const demandData = [
+  //   { month: 'Jan', actual: 850, forecast: 0, lower: 0, upper: 0 },
+  //   { month: 'Feb', actual: 920, forecast: 0, lower: 0, upper: 0 },
+  //   { month: 'Mar', actual: 880, forecast: 0, lower: 0, upper: 0 },
+  //   { month: 'Apr', actual: 1050, forecast: 0, lower: 0, upper: 0 },
+  //   { month: 'May', actual: 1100, forecast: 0, lower: 0, upper: 0 },
+  //   { month: 'Jun', actual: 1080, forecast: 0, lower: 0, upper: 0 },
+  //   { month: 'Jul', actual: 0, forecast: 1150, lower: 1050, upper: 1250 },
+  //   { month: 'Aug', actual: 0, forecast: 1200, lower: 1100, upper: 1300 },
+  //   { month: 'Sep', actual: 0, forecast: 1180, lower: 1080, upper: 1280 },
+  //   { month: 'Oct', actual: 0, forecast: 1250, lower: 1150, upper: 1350 },
+  // ];
 
   const machineHealth = [
     { 

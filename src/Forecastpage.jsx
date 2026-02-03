@@ -212,6 +212,7 @@ const Forecast = ({
 };
 
 // --- Helper Components ---
+// eslint-disable-next-line no-unused-vars
 const MetricCard = ({ theme, label, value, labelColor, valueColor, bgColor }) => (
   <div className={`${bgColor} rounded-lg p-4`}>
     <p className={`text-sm font-medium ${labelColor}`}>{label}</p>
