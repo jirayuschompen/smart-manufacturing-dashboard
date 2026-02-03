@@ -7,7 +7,7 @@ const LoginMockup = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
-  const [language, setLanguage] = useState('th');
+  const [language, setLanguage] = useState('en');
   const [isLoading, setIsLoading] = useState(false);
   const [user, setUser] = useState(null);
   const [error, setError] = useState('');
