@@ -1,9 +1,8 @@
 import React from 'react';
 // ====================================================================
-// Weather Service - TMD API Integration
+// Weather Service - TMD API Integration (Fixed Version)
 // ====================================================================
-// ไฟล์นี้จัดการการดึงข้อมูลพยากรณ์อากาศจาก TMD API
-// และแปลงข้อมูลให้เหมาะกับ Weather Widget
+// แก้ไขปัญหา: Invalid API response format
 
 // ====================================================================
 // 🔧 CONFIGURATION - แก้พิกัดตรงนี้
@@ -25,7 +24,7 @@ const WEATHER_CONFIG = {
 };
 
 // ====================================================================
-// Weather Condition Mapping (จาก TMD API Documentation)
+// Weather Condition Mapping
 // ====================================================================
 const CONDITION_MAP = {
   1: 'Clear',
@@ -45,45 +44,27 @@ const CONDITION_MAP = {
 // ====================================================================
 // Utility Functions
 // ====================================================================
-
-/**
- * แปลงความเร็วลมจาก m/s เป็น km/h
- */
 const msToKmh = (ms) => {
-  return Math.round(ms * 3.6 * 10) / 10; // ทศนิยม 1 ตำแหน่ง
+  return Math.round(ms * 3.6 * 10) / 10;
 };
 
-/**
- * แปลง solar radiation เป็น W/m²
- */
-// eslint-disable-next-line no-unused-vars
-const calculateLight = (swdown) => {
-  return swdown ? Math.round(swdown) : 850; // Default 850 W/m²
-};
-
-/**
- * คำนวณ Cloud Coverage จาก low, medium, high
- */
 const calculateCloudCoverage = (low, med, high) => {
   const total = (low + med + high) / 3;
   return Math.round(total);
 };
 
 // ====================================================================
-// API Fetch Function
+// API Fetch Function - FIXED VERSION
 // ====================================================================
-
-/**
- * ดึงข้อมูลพยากรณ์อากาศจาก TMD API
- * @returns {Promise<Object>} Weather data object
- */
 export const fetchWeatherData = async () => {
   try {
     const url = `${WEATHER_CONFIG.API_BASE_URL}/forecast/location/hourly/at?` +
       `lat=${WEATHER_CONFIG.LATITUDE}&` +
       `lon=${WEATHER_CONFIG.LONGITUDE}&` +
       `fields=${WEATHER_CONFIG.FIELDS}&` +
-      `duration=1`; // ขอข้อมูล 1 ชั่วโมงปัจจุบัน
+      `duration=1`;
+
+    console.log('🔄 Calling TMD API:', url);
 
     const response = await fetch(url, {
       method: 'GET',
@@ -93,41 +74,88 @@ export const fetchWeatherData = async () => {
       }
     });
 
+    console.log('📡 Response Status:', response.status, response.statusText);
+
     if (!response.ok) {
       throw new Error(`TMD API Error: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
+    console.log('📦 Raw API Response:', data);
     
-    // Parse ข้อมูลจาก API Response
-    if (data.WeatherForcasts && data.WeatherForcasts.length > 0) {
+    // ====================================================================
+    // 🔍 FIXED: ตรวจสอบ Response Format แบบละเอียด
+    // ====================================================================
+    
+    // ตรวจสอบ Response Format หลายแบบ
+    let weatherApiData = null;
+    
+    // Format 1: WeatherForcasts (typo ใน API)
+    if (data.WeatherForcasts && Array.isArray(data.WeatherForcasts) && data.WeatherForcasts.length > 0) {
       const forecast = data.WeatherForcasts[0];
-      if (forecast.forecasts && forecast.forecasts.length > 0) {
-        return parseWeatherData(forecast.forecasts[0].data);
+      if (forecast.forecasts && Array.isArray(forecast.forecasts) && forecast.forecasts.length > 0) {
+        weatherApiData = forecast.forecasts[0].data;
+        console.log('✅ Format 1: WeatherForcasts found');
       }
     }
+    
+    // Format 2: WeatherForecasts (correct spelling)
+    if (!weatherApiData && data.WeatherForecasts && Array.isArray(data.WeatherForecasts) && data.WeatherForecasts.length > 0) {
+      const forecast = data.WeatherForecasts[0];
+      if (forecast.forecasts && Array.isArray(forecast.forecasts) && forecast.forecasts.length > 0) {
+        weatherApiData = forecast.forecasts[0].data;
+        console.log('✅ Format 2: WeatherForecasts found');
+      }
+    }
+    
+    // Format 3: ข้อมูลอยู่ระดับบนสุด
+    if (!weatherApiData && data.location && data.forecasts) {
+      if (Array.isArray(data.forecasts) && data.forecasts.length > 0) {
+        weatherApiData = data.forecasts[0].data;
+        console.log('✅ Format 3: Direct forecasts found');
+      }
+    }
+    
+    // Format 4: ข้อมูลอยู่ใน data.data
+    if (!weatherApiData && data.data) {
+      weatherApiData = data.data;
+      console.log('✅ Format 4: data.data found');
+    }
 
-    throw new Error('Invalid API response format');
+    // ====================================================================
+    // ถ้าไม่เจอข้อมูลเลย ให้ Log และใช้ Fallback
+    // ====================================================================
+    if (!weatherApiData) {
+      console.error('❌ Invalid API Response Structure:', JSON.stringify(data, null, 2));
+      throw new Error('Invalid API response format - No weather data found in response');
+    }
+
+    console.log('✅ Weather Data Extracted:', weatherApiData);
+    return parseWeatherData(weatherApiData);
 
   } catch (error) {
     console.error('❌ Error fetching weather data:', error);
+    console.error('Error Details:', error.message);
+    
     // Return fallback data
     return getFallbackWeatherData();
   }
 };
 
-/**
- * แปลงข้อมูลจาก TMD API เป็นรูปแบบที่ใช้ใน Widget
- */
+// ====================================================================
+// Parse Weather Data
+// ====================================================================
 const parseWeatherData = (apiData) => {
-  return {
+  console.log('🔄 Parsing weather data:', apiData);
+  
+  const parsed = {
     // Temperature
     temp: apiData.tc ? Math.round(apiData.tc * 10) / 10 : 32.5,
     
-    // Condition (แปลงจากรหัสเป็นข้อความ)
+    // Condition
     condition: CONDITION_MAP[apiData.cond] || 'Partly Cloudy',
     
-    // Wind Speed (แปลง m/s → km/h)
+    // Wind Speed (m/s → km/h)
     windSpeed: apiData.ws10m ? msToKmh(apiData.ws10m) : 12,
     
     // Wind Direction
@@ -136,19 +164,19 @@ const parseWeatherData = (apiData) => {
     // Humidity
     humidity: apiData.rh ? Math.round(apiData.rh) : 65,
     
-    // Pressure (hPa)
+    // Pressure
     pressure: apiData.slp ? Math.round(apiData.slp) : 1012,
     
-    // Light/Solar Radiation (ใช้ข้อมูลจาก daily API หรือ estimate)
-    light: 850, // W/m² - ต้องดึงจาก daily API แยก
+    // Light (W/m²)
+    light: 850,
     
-    // PM 2.5 (Mock Data - ไม่มีใน TMD API)
+    // PM 2.5 (Mock)
     pm25: 12,
     
-    // AQI (Mock Data - ไม่มีใน TMD API)
+    // AQI (Mock)
     aqi: 'Good',
     
-    // Rain (mm)
+    // Rain
     rain: apiData.rain || 0,
     
     // Cloud Coverage
@@ -161,12 +189,16 @@ const parseWeatherData = (apiData) => {
     // Timestamp
     lastUpdated: new Date().toISOString()
   };
+  
+  console.log('✅ Parsed weather data:', parsed);
+  return parsed;
 };
 
-/**
- * Fallback data เมื่อ API ล้มเหลว
- */
+// ====================================================================
+// Fallback Data
+// ====================================================================
 const getFallbackWeatherData = () => {
+  console.warn('⚠️ Using fallback weather data');
   return {
     temp: 32.5,
     condition: 'Partly Cloudy',
@@ -185,9 +217,8 @@ const getFallbackWeatherData = () => {
 };
 
 // ====================================================================
-// Weather Data Manager (with Auto-Update)
+// Weather Data Manager
 // ====================================================================
-
 class WeatherDataManager {
   constructor() {
     this.currentData = null;
@@ -195,26 +226,17 @@ class WeatherDataManager {
     this.listeners = [];
   }
 
-  /**
-   * เริ่มต้นและดึงข้อมูลครั้งแรก
-   */
   async initialize() {
     console.log('🌤️ Initializing Weather Service...');
     console.log(`📍 Location: ${WEATHER_CONFIG.LATITUDE}°N, ${WEATHER_CONFIG.LONGITUDE}°E`);
     
-    // ดึงข้อมูลครั้งแรก
     await this.updateWeatherData();
-    
-    // ตั้งค่า Auto-update ทุก 30 นาที
     this.startAutoUpdate();
     
     console.log('✅ Weather Service initialized');
     console.log(`🔄 Auto-update every ${WEATHER_CONFIG.UPDATE_INTERVAL_MS / 60000} minutes`);
   }
 
-  /**
-   * ดึงข้อมูลอากาศใหม่
-   */
   async updateWeatherData() {
     try {
       console.log('🔄 Fetching weather data from TMD API...');
@@ -226,9 +248,7 @@ class WeatherDataManager {
         console.log('✅ Weather data updated successfully');
       }
       
-      // แจ้ง listeners ทั้งหมด
       this.notifyListeners();
-      
       return this.currentData;
     } catch (error) {
       console.error('❌ Failed to update weather data:', error);
@@ -236,9 +256,6 @@ class WeatherDataManager {
     }
   }
 
-  /**
-   * เริ่ม Auto-update
-   */
   startAutoUpdate() {
     if (this.updateInterval) {
       clearInterval(this.updateInterval);
@@ -249,9 +266,6 @@ class WeatherDataManager {
     }, WEATHER_CONFIG.UPDATE_INTERVAL_MS);
   }
 
-  /**
-   * หยุด Auto-update
-   */
   stopAutoUpdate() {
     if (this.updateInterval) {
       clearInterval(this.updateInterval);
@@ -259,33 +273,22 @@ class WeatherDataManager {
     }
   }
 
-  /**
-   * ดึงข้อมูลปัจจุบัน
-   */
   getCurrentData() {
     return this.currentData || getFallbackWeatherData();
   }
 
-  /**
-   * Subscribe to weather updates
-   */
   subscribe(callback) {
     this.listeners.push(callback);
     
-    // ส่งข้อมูลปัจจุบันให้ทันที
     if (this.currentData) {
       callback(this.currentData);
     }
     
-    // Return unsubscribe function
     return () => {
       this.listeners = this.listeners.filter(cb => cb !== callback);
     };
   }
 
-  /**
-   * แจ้ง listeners ทั้งหมด
-   */
   notifyListeners() {
     this.listeners.forEach(callback => {
       try {
@@ -296,9 +299,6 @@ class WeatherDataManager {
     });
   }
 
-  /**
-   * Cleanup
-   */
   destroy() {
     this.stopAutoUpdate();
     this.listeners = [];
@@ -312,20 +312,14 @@ class WeatherDataManager {
 export const weatherManager = new WeatherDataManager();
 
 // ====================================================================
-// React Hook สำหรับใช้ใน Component
+// React Hook
 // ====================================================================
-
-/**
- * Custom React Hook สำหรับดึงข้อมูลอากาศ
- * @returns {Object} { weatherData, isLoading, error, refresh }
- */
 export const useWeatherData = () => {
   const [weatherData, setWeatherData] = React.useState(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState(null);
 
   React.useEffect(() => {
-    // Initialize on mount
     const initWeather = async () => {
       try {
         setIsLoading(true);
@@ -342,20 +336,15 @@ export const useWeatherData = () => {
 
     initWeather();
 
-    // Subscribe to updates
     const unsubscribe = weatherManager.subscribe((data) => {
       setWeatherData(data);
     });
 
-    // Cleanup
     return () => {
       unsubscribe();
     };
   }, []);
 
-  /**
-   * Force refresh weather data
-   */
   const refresh = async () => {
     setIsLoading(true);
     try {
@@ -378,7 +367,7 @@ export const useWeatherData = () => {
 };
 
 // ====================================================================
-// Export Configuration (for debugging)
+// Export Configuration
 // ====================================================================
 export const getWeatherConfig = () => ({
   location: {

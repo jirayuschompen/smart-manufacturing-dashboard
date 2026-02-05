@@ -132,7 +132,7 @@ const Overview = ({
                 <div className="flex items-center gap-1.5 mt-1">
                   <Clock className="w-3 h-3 text-blue-200 opacity-70" />
                   <span className="text-[9px] text-blue-200 opacity-70">
-                    อัพเดท: {lastUpdateTime}
+                    Update: {lastUpdateTime}
                   </span>
                 </div>
               )}
