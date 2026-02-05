@@ -1,15 +1,29 @@
-import React from 'react';
+/* eslint-disable react-hooks/set-state-in-effect */
+import React, { useState, useEffect } from 'react';
 import { 
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart 
 } from 'recharts';
 import { 
-  TrendingUp, AlertTriangle, Activity, Factory, Bell, Clock, X, Cloud, Wind, Droplets, Gauge, Search, Info 
+  TrendingUp, AlertTriangle, Activity, Factory, Bell, Clock, X, Cloud, Wind, Droplets, Gauge, Search, Info, RefreshCw 
 } from 'lucide-react';
+
+// ====================================================================
+// ⭐ IMPORT PATH - แก้ตามโครงสร้าง Folder ของคุณ
+// ====================================================================
+// ตัวเลือก 1: ถ้า weatherService.js อยู่ใน folder เดียวกัน
+import { useWeatherData } from './weatherService';
+
+// ตัวเลือก 2: ถ้า weatherService.js อยู่ใน utils folder
+// import { useWeatherData } from '../utils/weatherService';
+
+// ตัวเลือก 3: ถ้า weatherService.js อยู่ใน services folder
+// import { useWeatherData } from '../services/weatherService';
+// ====================================================================
 
 const Overview = ({
   theme,
   currentLang,
-  weatherData,
+  // weatherData, // ❌ ไม่ใช้ prop นี้แล้ว - จะดึงจาก API
   kpiCards,
   productionDataSets,
   productionPeriod,
@@ -35,7 +49,27 @@ const Overview = ({
   filteredAlerts
 }) => {
 
-  // Helper function สำหรับ Icon ในหน้านี้
+  // ====================================================================
+  // 🌤️ Weather Data Hook - ดึงข้อมูลจาก TMD API
+  // ====================================================================
+  const { weatherData: apiWeatherData, isLoading: weatherLoading, error: weatherError, refresh: refreshWeather } = useWeatherData();
+
+  // State for showing last update time
+  const [lastUpdateTime, setLastUpdateTime] = useState('');
+
+  useEffect(() => {
+    if (apiWeatherData?.lastUpdated) {
+      const updateTime = new Date(apiWeatherData.lastUpdated);
+      setLastUpdateTime(updateTime.toLocaleTimeString('th-TH', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      }));
+    }
+  }, [apiWeatherData]);
+
+  // ====================================================================
+  // Helper Functions
+  // ====================================================================
   const getSeverityIcon = (severity) => {
     switch(severity) {
       case 'critical': return <AlertTriangle className="w-5 h-5 text-red-500" />;
@@ -45,17 +79,32 @@ const Overview = ({
     }
   };
 
+  // ใช้ข้อมูลจาก API หรือ fallback
+  const weatherData = apiWeatherData || {
+    temp: '--',
+    condition: 'Loading...',
+    windSpeed: '--',
+    humidity: '--',
+    pressure: '--',
+    light: '--',
+    pm25: '--',
+    aqi: '--'
+  };
+
   return (
-    // Container หลัก
     <div className="flex flex-col h-auto lg:h-[calc(100vh-160px)] gap-3 lg:gap-4 overflow-y-auto lg:overflow-hidden pb-20 lg:pb-0 scrollbar-hide relative">
       
-      {/* --- Weather Widget --- */}
+      {/* ====================================================================
+          Weather Widget - 🌤️ ใช้ข้อมูลจาก TMD API
+          ==================================================================== */}
       <div className={`rounded-2xl p-5 border shadow-lg transition-all duration-300 ${
         theme === 'dark' 
           ? 'bg-[#111827] border-slate-800 text-white' 
           : 'bg-gradient-to-r from-blue-600 to-blue-500 border-blue-400 text-white' 
       }`}>
         <div className="flex flex-col lg:flex-row items-center gap-6 lg:gap-0">
+          
+          {/* Left Section: Temperature & Condition */}
           <div className="flex items-center gap-5 min-w-max lg:pr-8">
             <div className={`p-3.5 rounded-2xl shadow-sm backdrop-blur-md ${
               theme === 'dark' ? 'bg-slate-800 text-blue-400' : 'bg-white/20 text-white'
@@ -70,7 +119,7 @@ const Overview = ({
               </h3>
               <div className="flex items-baseline gap-2.5">
                 <span className="text-4xl font-bold tracking-tighter leading-none text-white">
-                  {weatherData.temp}°
+                  {weatherLoading ? '...' : `${weatherData.temp}°`}
                 </span>
                 <span className={`text-base font-medium ${
                   theme === 'dark' ? 'text-slate-400' : 'text-blue-50'
@@ -78,21 +127,79 @@ const Overview = ({
                   {weatherData.condition}
                 </span>
               </div>
+              {/* Last Update Time */}
+              {lastUpdateTime && (
+                <div className="flex items-center gap-1.5 mt-1">
+                  <Clock className="w-3 h-3 text-blue-200 opacity-70" />
+                  <span className="text-[9px] text-blue-200 opacity-70">
+                    อัพเดท: {lastUpdateTime}
+                  </span>
+                </div>
+              )}
             </div>
+            
+            {/* Refresh Button */}
+            <button
+              onClick={refreshWeather}
+              disabled={weatherLoading}
+              className={`ml-2 p-2 rounded-lg transition-all ${
+                weatherLoading 
+                  ? 'opacity-50 cursor-not-allowed' 
+                  : 'hover:bg-white/10 active:scale-95'
+              }`}
+              title="รีเฟรชข้อมูลอากาศ"
+            >
+              <RefreshCw className={`w-4 h-4 ${weatherLoading ? 'animate-spin' : ''}`} />
+            </button>
           </div>
+          
+          {/* Divider */}
           <div className={`hidden lg:block w-px h-12 mx-auto ${
             theme === 'dark' ? 'bg-slate-700' : 'bg-white/20'
           }`}></div>
+          
+          {/* Right Section: Weather Details */}
           <div className="w-full grid grid-cols-3 gap-y-6 gap-x-2 lg:grid-cols-6 lg:gap-x-4 lg:pl-8">
             {[
-              { label: 'Wind', val: `${weatherData.windSpeed} km/h`, icon: Wind },
-              { label: 'Humidity', val: `${weatherData.humidity}%`, icon: Droplets },
-              { label: 'Pressure', val: `${weatherData.pressure} hPa`, icon: Gauge },
-              { label: 'Light', val: '850 W/m²', icon: null, char: '☀️' },
-              { label: 'PM 2.5', val: '12 µg', icon: null, char: 'PM', highlight: true },
-              { label: 'AQI', val: 'Good', icon: null, char: '🍃', highlight: true },
+              { 
+                label: 'Wind', 
+                val: weatherLoading ? '...' : `${weatherData.windSpeed} km/h`, 
+                icon: Wind 
+              },
+              { 
+                label: 'Humidity', 
+                val: weatherLoading ? '...' : `${weatherData.humidity}%`, 
+                icon: Droplets 
+              },
+              { 
+                label: 'Pressure', 
+                val: weatherLoading ? '...' : `${weatherData.pressure} hPa`, 
+                icon: Gauge 
+              },
+              { 
+                label: 'Light', 
+                val: weatherLoading ? '...' : `${weatherData.light} W/m²`, 
+                icon: null, 
+                char: '☀️' 
+              },
+              { 
+                label: 'PM 2.5', 
+                val: `${weatherData.pm25} µg`, 
+                icon: null, 
+                char: 'PM', 
+                highlight: true,
+                isMock: true // ข้อมูล Mock
+              },
+              { 
+                label: 'AQI', 
+                val: weatherData.aqi, 
+                icon: null, 
+                char: '🍃', 
+                highlight: true,
+                isMock: true // ข้อมูล Mock
+              },
             ].map((item, i) => (
-              <div key={i} className="flex flex-col lg:flex-row items-center lg:justify-start lg:gap-3 text-center lg:text-left">
+              <div key={i} className="flex flex-col lg:flex-row items-center lg:justify-start lg:gap-3 text-center lg:text-left relative">
                 <div className={`mb-1.5 lg:mb-0 transition-colors ${
                   theme === 'dark' ? 'text-slate-500' : 'text-blue-100'
                 }`}>
@@ -111,6 +218,10 @@ const Overview = ({
                     theme === 'dark' ? 'text-slate-500' : 'text-blue-200'
                   }`}>
                     {item.label}
+                    {/* Mock Data Indicator */}
+                    {item.isMock && (
+                      <span className="ml-1 text-[8px] opacity-50" title="Mock Data">*</span>
+                    )}
                   </p>
                   <p className={`text-sm font-bold whitespace-nowrap ${
                     item.highlight ? 'text-green-300' : 'text-white'
@@ -122,9 +233,25 @@ const Overview = ({
             ))}
           </div>
         </div>
+
+        {/* Error Message - แสดงเฉพาะเมื่อมี Error จริงๆ */}
+        {weatherError && !apiWeatherData?.isFallback && (
+          <div className="mt-3 p-2 bg-red-500/20 border border-red-500/30 rounded-lg">
+            <p className="text-xs text-red-200 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4" />
+              ไม่สามารถโหลดข้อมูลอากาศได้: {weatherError}
+            </p>
+          </div>
+        )}
+
+        {/* Fallback Data Warning - ซ่อนไว้ ไม่แสดงให้ user เห็น */}
+        {/* แสดงเฉพาะใน Console สำหรับ Debug */}
+        {apiWeatherData?.isFallback && console.warn('⚠️ Using fallback weather data')}
       </div>
 
-      {/* --- KPI Cards --- */}
+      {/* ====================================================================
+          KPI Cards
+          ==================================================================== */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {kpiCards.map((kpi, idx) => {
           const Icon = kpi.icon;
@@ -174,7 +301,9 @@ const Overview = ({
         })}
       </div>
 
-      {/* --- Main Content Grid --- */}
+      {/* ====================================================================
+          Main Content Grid
+          ==================================================================== */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-0">
         
         {/* Left Column: Charts */}
@@ -205,17 +334,13 @@ const Overview = ({
                       borderRadius: '8px', 
                       fontSize: '12px' 
                     }}
-                    
                     labelStyle={{
-                      color: theme === 'dark' ? '#ffffff' : '#1e293b', // สีขาวใน Dark Mode
+                      color: theme === 'dark' ? '#ffffff' : '#1e293b',
                       fontWeight: 'bold',
                       marginBottom: '4px'
                     }}
-                    
                     cursor={{fill: theme === 'dark' ? '#334155' : '#f1f5f9', opacity: 0.4}} 
                   />
-                  
-                  {/* แก้ไขตรงนี้: เพิ่มเงื่อนไข productionPeriod === 'daily' ให้กว้างขึ้น (เช่น 50) */}
                   <Bar 
                     dataKey="oee" 
                     fill="#4093ff" 
@@ -226,9 +351,7 @@ const Overview = ({
                       productionPeriod === 'daily' ? 50 : 25
                     } 
                   />
-
                 </BarChart>
-
               </ResponsiveContainer>
             </div>
           </div>
@@ -262,14 +385,11 @@ const Overview = ({
                   <XAxis dataKey="label" stroke="#94a3b8" tick={{fontSize: 10}} axisLine={false} tickLine={false} dy={10} />
                   <YAxis stroke="#94a3b8" tick={{fontSize: 10}} axisLine={false} tickLine={false} />
                   <Tooltip contentStyle={{ backgroundColor: theme === 'dark' ? '#1e293b' : '#fff', borderColor: theme === 'dark' ? '#334155' : '#e2e8f0', borderRadius: '8px', fontSize: '12px' }} 
-                
-                  labelStyle={{
-                      color: theme === 'dark' ? '#ffffff' : '#1e293b', // สีขาวใน Dark Mode
+                    labelStyle={{
+                      color: theme === 'dark' ? '#ffffff' : '#1e293b',
                       fontWeight: 'bold',
                       marginBottom: '4px'
                     }} />
-                  
-                  {/* --- ส่วนที่เพิ่ม: Upper Bound --- */}
                   <Area 
                     type="monotone" 
                     dataKey="upper" 
@@ -280,8 +400,6 @@ const Overview = ({
                     fillOpacity={0.1} 
                     name="Upper Bound" 
                   />
-
-                  {/* --- ส่วนที่เพิ่ม: Lower Bound --- */}
                   <Area 
                     type="monotone" 
                     dataKey="lower" 
@@ -292,11 +410,7 @@ const Overview = ({
                     fillOpacity={0.1} 
                     name="Lower Bound" 
                   />
-
-                  {/* Forecast Line */}
                   <Area type="monotone" dataKey="forecast" stroke="#ffb30e" strokeWidth={2} fillOpacity={1} fill="url(#colorForecast)" name="Forecast" />
-                  
-                  {/* Actual Line */}
                   <Area type="monotone" dataKey="actual" stroke="#26df9b" strokeWidth={2} fillOpacity={1} fill="url(#colorActual)" name="Actual" connectNulls />
                 </AreaChart>
               </ResponsiveContainer>
@@ -310,7 +424,6 @@ const Overview = ({
           
           {/* Alerts List */}
           <div className={`h-[240px] lg:h-auto lg:flex-1 ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} rounded-xl shadow-sm border flex flex-col min-h-0 overflow-hidden`}>
-            {/* ส่วน Header */}
             <div className={`p-3 border-b ${theme === 'dark' ? 'border-slate-700' : 'border-slate-100'} flex-none flex justify-between items-center bg-opacity-50`}>
               <div className="flex items-center gap-2">
                 <div className="p-1.5 bg-red-100 rounded-md">
@@ -329,12 +442,8 @@ const Overview = ({
               </div>
             </div>
 
-            {/* ส่วนรายการ (List Body) */}
             <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar">
-              
-              {/* แก้ไขตรงนี้: ลบ .slice(0, 3) ออก และใช้ .map กับ alerts โดยตรง */}
               {alerts.map((alert) => (
-                
                 <div key={alert.id} onClick={() => {markAsRead(alert.id); setShowAllAlerts(true);}} className={`group p-2 rounded-lg border ${theme === 'dark' ? 'bg-slate-700 border-slate-600 hover:border-slate-500' : 'bg-slate-50 border-slate-100 hover:border-blue-200 hover:bg-white hover:shadow-sm'} transition-all cursor-pointer relative overflow-hidden`}>
                     <div className={`absolute left-0 top-0 bottom-0 w-1 ${alert.severity === 'critical' ? 'bg-red-500' : alert.severity === 'high' ? 'bg-orange-500' : alert.severity === 'medium' ? 'bg-yellow-500' : 'bg-blue-500'}`}></div>
                   <div className="pl-2">
@@ -351,17 +460,13 @@ const Overview = ({
 
           {/* Machine Health List */}
           <div className={`h-[300px] lg:h-auto lg:flex-1 ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} rounded-xl shadow-sm border flex flex-col min-h-0 overflow-hidden`}>
-            
-            {/* Header */}
             <div className={`p-3 border-b ${theme === 'dark' ? 'border-slate-700' : 'border-slate-100'} flex-none flex items-center gap-2`}>
-              {/* แก้ไข 1: ปรับสีพื้นหลังและสีไอคอนให้รองรับ Dark Mode */}
               <div className={`p-1.5 rounded-md ${theme === 'dark' ? 'bg-blue-900/30' : 'bg-blue-100'}`}>
                 <Activity className={`w-4 h-4 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`} />
               </div>
               <h3 className={`font-semibold text-sm ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{currentLang.machineHealth}</h3>
             </div>
 
-            {/* List Body */}
             <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar">
               {machineHealth.map((machine, idx) => (
                 <div key={idx} onClick={() => {setSelectedMachine(machine); setShowMachineDetail(true);}} className={`flex items-center justify-between p-2 rounded-lg border ${theme === 'dark' ? 'bg-slate-700 border-slate-600 hover:bg-slate-600' : 'bg-slate-50 border-slate-100 hover:bg-white hover:shadow-sm hover:border-blue-200'} transition cursor-pointer`}>
@@ -371,7 +476,6 @@ const Overview = ({
                         <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" fill="transparent" className={`${theme === 'dark' ? 'text-slate-600' : 'text-slate-200'}`} />
                         <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" fill="transparent" strokeDasharray={63} strokeDashoffset={63 - (63 * machine.health) / 100} className={`${machine.health >= 80 ? 'text-green-500' : machine.health >= 60 ? 'text-yellow-500' : 'text-red-500'}`} />
                       </svg>
-                      {/* แก้ไข 2: เพิ่มเงื่อนไขสีตัวเลข ให้เป็นสีขาวใน Dark Mode */}
                       <span className={`absolute text-[7px] font-bold ${theme === 'dark' ? 'text-slate-100' : 'text-slate-800'}`}>
                         {machine.health}
                       </span>
@@ -389,12 +493,11 @@ const Overview = ({
             </div>
           </div>
 
-          {/* --- All Alerts Modal --- */}
+          {/* All Alerts Modal */}
           {showAllAlerts && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
             <div className={`w-full max-w-4xl h-[85vh] rounded-xl shadow-2xl flex flex-col ${theme === 'dark' ? 'bg-[#1e293b]' : 'bg-white'} zoom-in-95 duration-200`}>
               
-              {/* 1. Header: Title & Close Button */}
               <div className={`p-4 border-b flex justify-between items-center ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>
                 <div className="flex items-center gap-3">
                   <Bell className="w-6 h-6 text-blue-600" />
@@ -413,9 +516,7 @@ const Overview = ({
                 </button>
               </div>
 
-              {/* 2. Controls: Search, Filters, Actions */}
               <div className="p-4 space-y-4">
-                {/* Search Bar */}
                 <div className={`flex items-center px-3 py-2 rounded-lg border ${theme === 'dark' ? 'bg-slate-800 border-slate-600' : 'bg-white border-slate-300'}`}>
                   <Search className="w-5 h-5 text-slate-400 mr-2" />
                   <input 
@@ -427,7 +528,6 @@ const Overview = ({
                   />
                 </div>
 
-                {/* Filters & Action Buttons */}
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex flex-wrap gap-2">
                     {['All', 'Unread', 'Read', 'critical', 'High', 'Medium', 'Low'].map(filter => (
@@ -461,7 +561,6 @@ const Overview = ({
                 </div>
               </div>
 
-              {/* 3. Alerts List Area */}
               <div className={`flex-1 overflow-y-auto px-4 pb-4 space-y-3 custom-scrollbar ${theme === 'dark' ? 'bg-slate-900/50' : 'bg-slate-50'}`}>
                 {filteredAlerts.length > 0 ? (
                   filteredAlerts.map((alert) => (
@@ -469,9 +568,7 @@ const Overview = ({
                       theme === 'dark' ? 'bg-white/5 border-slate-700 hover:border-slate-600' : 'bg-white border-slate-200 hover:border-blue-300'
                     }`}>
                       
-                      {/* Left Side: Icon & Content */}
                       <div className="flex items-start gap-4">
-                        {/* Circle Icon Background */}
                         <div className={`p-2 rounded-full flex-none ${
                           alert.severity === 'medium' ? 'bg-yellow-100 text-yellow-600' :
                           alert.severity === 'high' ? 'bg-orange-100 text-orange-600' :
@@ -480,13 +577,11 @@ const Overview = ({
                             {getSeverityIcon(alert.severity)}
                         </div>
 
-                        {/* Text Content */}
                         <div>
                           <div className="flex items-center gap-2 mb-1">
                             <span className={`font-bold text-sm ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
                               {alert.machine}
                             </span>
-                            {/* Severity Badge */}
                             <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase ${
                               alert.severity === 'critical' ? 'bg-red-100 text-red-700' :
                               alert.severity === 'high' ? 'bg-orange-100 text-orange-700' :
@@ -494,7 +589,6 @@ const Overview = ({
                             }`}>
                               {alert.severity}
                             </span>
-                            {/* Unread Dot */}
                             {!alert.read && <span className="w-2 h-2 rounded-full bg-blue-500 ml-1"></span>}
                           </div>
                           
@@ -502,13 +596,11 @@ const Overview = ({
                             {alert.message}
                           </p>
                           
-                          {/* Meta Data Row: Time & Type */}
                           <div className="flex items-center gap-4 mt-2">
                             <span className="flex items-center text-xs text-slate-400 gap-1">
                               <Clock className="w-3 h-3" /> {alert.time}
                             </span>
                             
-                            {/* Type Indicator */}
                             {alert.type === 'warning' && <span className="flex items-center text-xs text-orange-500 gap-1 font-medium"><AlertTriangle className="w-3 h-3" /> Warning</span>}
                             {alert.type === 'info' && <span className="flex items-center text-xs text-blue-500 gap-1 font-medium"><Info className="w-3 h-3" /> Info</span>}
                             {alert.type === 'critical' && <span className="flex items-center text-xs text-red-500 gap-1 font-medium"><div className="w-2 h-2 rounded-full bg-red-500"></div> Critical</span>}
@@ -516,7 +608,6 @@ const Overview = ({
                         </div>
                       </div>
 
-                      {/* Right Side: Delete Button */}
                       <button 
                         onClick={() => deleteAlert(alert.id)}
                         className={`absolute top-3 right-3 p-1 rounded-full opacity-50 hover:opacity-100 transition ${theme === 'dark' ? 'hover:bg-slate-700 text-white' : 'hover:bg-slate-100 text-slate-500'}`}
@@ -533,7 +624,6 @@ const Overview = ({
                 )}
               </div>
 
-              {/* 4. Footer */}
               <div className={`p-4 border-t flex justify-between items-center ${theme === 'dark' ? 'border-slate-700 bg-slate-800/50' : 'border-slate-200 bg-slate-50'}`}>
                 <span className={`text-xs ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
                   Showing {filteredAlerts.length} of {alerts.length} items
