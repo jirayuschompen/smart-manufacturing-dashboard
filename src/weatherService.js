@@ -64,7 +64,7 @@ export const fetchWeatherData = async () => {
       `fields=${WEATHER_CONFIG.FIELDS}&` +
       `duration=1`;
 
-    console.log('🔄 Calling TMD API:', url);
+    console.log(' Calling TMD API:', url);
 
     const response = await fetch(url, {
       method: 'GET',
@@ -74,14 +74,14 @@ export const fetchWeatherData = async () => {
       }
     });
 
-    console.log('📡 Response Status:', response.status, response.statusText);
+    console.log('Response Status:', response.status, response.statusText);
 
     if (!response.ok) {
       throw new Error(`TMD API Error: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
-    console.log('📦 Raw API Response:', data);
+    console.log(' Raw API Response:', data);
     
     // ====================================================================
     // 🔍 FIXED: ตรวจสอบ Response Format แบบละเอียด
@@ -95,7 +95,7 @@ export const fetchWeatherData = async () => {
       const forecast = data.WeatherForcasts[0];
       if (forecast.forecasts && Array.isArray(forecast.forecasts) && forecast.forecasts.length > 0) {
         weatherApiData = forecast.forecasts[0].data;
-        console.log('✅ Format 1: WeatherForcasts found');
+        console.log('Format 1: WeatherForcasts found');
       }
     }
     
@@ -104,7 +104,7 @@ export const fetchWeatherData = async () => {
       const forecast = data.WeatherForecasts[0];
       if (forecast.forecasts && Array.isArray(forecast.forecasts) && forecast.forecasts.length > 0) {
         weatherApiData = forecast.forecasts[0].data;
-        console.log('✅ Format 2: WeatherForecasts found');
+        console.log(' Format 2: WeatherForecasts found');
       }
     }
     
@@ -112,29 +112,29 @@ export const fetchWeatherData = async () => {
     if (!weatherApiData && data.location && data.forecasts) {
       if (Array.isArray(data.forecasts) && data.forecasts.length > 0) {
         weatherApiData = data.forecasts[0].data;
-        console.log('✅ Format 3: Direct forecasts found');
+        console.log(' Format 3: Direct forecasts found');
       }
     }
     
     // Format 4: ข้อมูลอยู่ใน data.data
     if (!weatherApiData && data.data) {
       weatherApiData = data.data;
-      console.log('✅ Format 4: data.data found');
+      console.log(' Format 4: data.data found');
     }
 
     // ====================================================================
     // ถ้าไม่เจอข้อมูลเลย ให้ Log และใช้ Fallback
     // ====================================================================
     if (!weatherApiData) {
-      console.error('❌ Invalid API Response Structure:', JSON.stringify(data, null, 2));
+      console.error('Invalid API Response Structure:', JSON.stringify(data, null, 2));
       throw new Error('Invalid API response format - No weather data found in response');
     }
 
-    console.log('✅ Weather Data Extracted:', weatherApiData);
+    console.log(' Weather Data Extracted:', weatherApiData);
     return parseWeatherData(weatherApiData);
 
   } catch (error) {
-    console.error('❌ Error fetching weather data:', error);
+    console.error('Error fetching weather data:', error);
     console.error('Error Details:', error.message);
     
     // Return fallback data
@@ -146,7 +146,7 @@ export const fetchWeatherData = async () => {
 // Parse Weather Data
 // ====================================================================
 const parseWeatherData = (apiData) => {
-  console.log('🔄 Parsing weather data:', apiData);
+  console.log('Parsing weather data:', apiData);
   
   const parsed = {
     // Temperature
@@ -190,7 +190,7 @@ const parseWeatherData = (apiData) => {
     lastUpdated: new Date().toISOString()
   };
   
-  console.log('✅ Parsed weather data:', parsed);
+  console.log('Parsed weather data:', parsed);
   return parsed;
 };
 
@@ -198,7 +198,7 @@ const parseWeatherData = (apiData) => {
 // Fallback Data
 // ====================================================================
 const getFallbackWeatherData = () => {
-  console.warn('⚠️ Using fallback weather data');
+  console.warn('Using fallback weather data');
   return {
     temp: 32.5,
     condition: 'Partly Cloudy',
@@ -233,25 +233,25 @@ class WeatherDataManager {
     await this.updateWeatherData();
     this.startAutoUpdate();
     
-    console.log('✅ Weather Service initialized');
-    console.log(`🔄 Auto-update every ${WEATHER_CONFIG.UPDATE_INTERVAL_MS / 60000} minutes`);
+    console.log('Weather Service initialized');
+    console.log(`Auto-update every ${WEATHER_CONFIG.UPDATE_INTERVAL_MS / 60000} minutes`);
   }
 
   async updateWeatherData() {
     try {
-      console.log('🔄 Fetching weather data from TMD API...');
+      console.log('Fetching weather data from TMD API...');
       this.currentData = await fetchWeatherData();
       
       if (this.currentData.isFallback) {
-        console.warn('⚠️ Using fallback weather data');
+        console.warn('Using fallback weather data');
       } else {
-        console.log('✅ Weather data updated successfully');
+        console.log('Weather data updated successfully');
       }
       
       this.notifyListeners();
       return this.currentData;
     } catch (error) {
-      console.error('❌ Failed to update weather data:', error);
+      console.error('Failed to update weather data:', error);
       return this.currentData || getFallbackWeatherData();
     }
   }
