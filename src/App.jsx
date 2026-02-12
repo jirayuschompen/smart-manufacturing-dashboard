@@ -809,7 +809,7 @@ const Dashboard = ({ onLogout }) => {
         <div className="max-w-7xl mx-auto">
           <div className="flex overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
             <div className="flex min-w-full px-2 lg:px-6">
-              {[ { id: 'overview', label: 'Overview', icon: Activity }, { id: 'forecast', label: 'Demand Forecasting', icon: TrendingUp }, { id: 'planning', label: 'Production Planning', icon: Calendar }, { id: 'maintenance', label: 'Predictive Maintenance', icon: Settings } ].map((tab) => {
+              {[ { id: 'overview', label: 'Overview', icon: Activity }, { id: 'forecast', label: 'Demand Forecasting', icon: TrendingUp },{ id: 'maintenance', label: 'Predictive Maintenance', icon: Settings } ,{ id: 'planning', label: 'Production Planning', icon: Calendar } ].map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
                 return (
@@ -889,10 +889,12 @@ const Dashboard = ({ onLogout }) => {
         {/* --- ส่วน Planning  --- */}
         {activeTab === 'planning' && (
           <Planning 
-            theme={theme}
-            language={language}
-            currentLang={currentLang}
-            setShowPlanningModal={setShowPlanningModal}
+              theme={theme}
+              language={language}
+              currentLang={currentLang}
+              setShowPlanningModal={setShowPlanningModal}
+              machineHealth={machineHealth}  // ← เพิ่ม
+              handleOpenSchedule={handleOpenSchedule}
           />
         )}
 
