@@ -23,7 +23,6 @@ import { useWeatherData } from './weatherService';
 const Overview = ({
   theme,
   currentLang,
-  // weatherData, // ❌ ไม่ใช้ prop นี้แล้ว - จะดึงจาก API
   kpiCards,
   productionDataSets,
   productionPeriod,

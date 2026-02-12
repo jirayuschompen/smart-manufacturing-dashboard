@@ -10,6 +10,17 @@ import Planning from './Planningpage';
 import Maintenance from './Maintenancepage';
 import LoginMockup from './login';
 
+// --- App Component ---
+const App = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  if (!isAuthenticated) {
+    return <LoginMockup onLogin={() => setIsAuthenticated(true)} />;
+  }
+
+  return <Dashboard onLogout={() => setIsAuthenticated(false)} />;
+};
+
 // 1. ค้นหาฟังก์ชัน generateDailyData แล้ววางทับด้วยอันนี้
 const generateDailyData = () => {
   const data = [];
@@ -1831,15 +1842,6 @@ const Dashboard = ({ onLogout }) => {
   );
 };
 
-// --- App Component ---
-const App = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  if (!isAuthenticated) {
-    return <LoginMockup onLogin={() => setIsAuthenticated(true)} />;
-  }
-
-  return <Dashboard onLogout={() => setIsAuthenticated(false)} />;
-};
 
 export default App;
