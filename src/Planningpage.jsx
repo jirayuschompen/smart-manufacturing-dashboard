@@ -1,11 +1,18 @@
 // src/Planning.jsx
-import React from 'react';
+import React, { useMemo } from 'react';
+import { 
+  AlertTriangle, TrendingDown, TrendingUp, Calendar, 
+  DollarSign, Factory, Wrench, CheckCircle, XCircle,
+  Clock, BarChart3
+} from 'lucide-react';
 
 const Planning = ({
   theme,
   language,
   currentLang,
-  setShowPlanningModal
+  setShowPlanningModal,
+  machineHealth, // ดึงข้อมูลจาก Maintenance
+  handleOpenSchedule
 }) => {
 
   // Mockup ข้อมูลตารางการผลิต
