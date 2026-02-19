@@ -714,7 +714,7 @@
               <div className="flex items-center gap-3">
                 <div className="p-1.5 rounded-xl shadow-md shrink-0">
                   <img 
-                    src="src\assets\logo.png" 
+                    src="src/assets/logo.png" 
                     alt="Smart Manufacturing AI Logo"
                     className="w-9 h-9 lg:w-10 lg:h-10 object-contain"
                   />
