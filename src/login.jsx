@@ -241,9 +241,13 @@ if (user) {
           <div className="text-white space-y-8 hidden lg:block">
             <div className="space-y-4">
               <div className="flex items-center space-x-3">
-                <div className="bg-gradient-to-br from-blue-400 to-blue-600 p-3 rounded-xl shadow-2xl">
-                  <Cpu className="w-12 h-12 text-white" />
-                </div>
+                <div className="rounded-xl shadow-md shrink-0">
+                  <img 
+                    src="src\assets\logo.png" 
+                    alt="Smart Manufacturing AI Logo"
+                    className="lg:w-20 lg:h-20 object-contain"
+                  />
+                  </div>
                 <div>
                   <h1 className="text-4xl font-bold">{lang.welcome}</h1>
                   <h2 className="text-5xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">

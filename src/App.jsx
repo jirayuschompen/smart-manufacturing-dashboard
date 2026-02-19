@@ -202,7 +202,7 @@
         demandForecasting: 'พยากรณ์ความต้องการ',
         productionPlanning: 'วางแผนการผลิต',
         predictiveMaintenance: 'การบำรุงรักษาเชิงคาดการณ์',
-        overallOEE: 'OEE รวม',
+        overallOEE: 'PR (Performance Ratio)',
         forecastAccuracy: 'ความแม่นยำการพยากรณ์',
         activeMachines: 'เครื่องจักรที่ทำงาน',
         criticalAlerts: 'การแจ้งเตือนสำคัญ',
@@ -296,7 +296,7 @@
         demandForecasting: 'Demand Forecasting',
         productionPlanning: 'Production Planning',
         predictiveMaintenance: 'Predictive Maintenance',
-        overallOEE: 'Overall OEE',
+        overallOEE: 'PR (Performance Ratio)',
         forecastAccuracy: 'Forecast Accuracy',
         activeMachines: 'Active Machines',
         criticalAlerts: 'Critical Alerts',
@@ -550,9 +550,9 @@
     ];
 
     const kpiCards = [
-      { title: 'Overall OEE', value: '86.2%', change: '+2.3%', trend: 'up', icon: Activity, color: 'blue' },
+      { title: 'Overall OEE', value: '20.2%', change: '+2.3%', trend: 'up', icon: Activity, color: 'blue' },
       { title: 'Forecast Accuracy', value: '91.5%', change: '+5.1%', trend: 'up', icon: TrendingUp, color: 'green' },
-      { title: 'Active Machines', value: '24/26', change: '2 under maintenance', trend: 'neutral', icon: Factory, color: 'purple' },
+      { title: 'Active Machines', value: '5/6', change: '1 under maintenance', trend: 'neutral', icon: Factory, color: 'purple' },
       { title: 'Critical Alerts', value: '3', change: '2 new today', trend: 'down', icon: AlertTriangle, color: 'red' },
     ];
 
@@ -712,9 +712,13 @@
           <div className="max-w-7xl mx-auto px-4 lg:px-6 py-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-2 rounded-xl shadow-md shrink-0">
-                  <Cpu className="w-5 h-5 lg:w-6 lg:h-6 text-white" />
-                </div>
+                <div className="p-1.5 rounded-xl shadow-md shrink-0">
+                  <img 
+                    src="src\assets\logo.png" 
+                    alt="Smart Manufacturing AI Logo"
+                    className="w-9 h-9 lg:w-10 lg:h-10 object-contain"
+                  />
+                  </div>
                 <div className="flex flex-col">
                   <h1 className={`text-base lg:text-xl font-bold leading-none ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
                     {currentLang.title}
