@@ -243,7 +243,7 @@ if (user) {
               <div className="flex items-center space-x-3">
                 <div className="rounded-xl shadow-md shrink-0">
                   <img 
-                    src="src\assets\logo.png" 
+                    src="https://github.com/jirayuschompen/smart-manufacturing-dashboard/blob/main/src/assets/logo.png?raw=true" 
                     alt="Smart Manufacturing AI Logo"
                     className="lg:w-20 lg:h-20 object-contain"
                   />
