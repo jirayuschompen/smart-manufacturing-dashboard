@@ -1,4 +1,4 @@
-  /* eslint-disable no-unused-vars */
+/* eslint-disable no-unused-vars */
   import React, {useState} from 'react';
   import { TrendingUp, AlertTriangle, Activity, Settings, Calendar, Package, Factory, Cpu, 
     Bell, ChevronRight, CheckCircle, XCircle, Clock, X, User, LogOut, Shield, 
@@ -9,6 +9,7 @@
   import Planning from './Planningpage';
   import Maintenance from './Maintenancepage';
   import LoginMockup from './login';
+  import SungrowLivePanel from './SungrowLivePanel';
 
   // --- App Component ---
   const App = () => {
@@ -21,7 +22,6 @@
     return <Dashboard onLogout={() => setIsAuthenticated(false)} />;
   };
 
-  // 1. ค้นหาฟังก์ชัน generateDailyData แล้ววางทับด้วยอันนี้
   const generateDailyData = () => {
     const data = [];
     for (let h = 0; h < 24; h++) {
@@ -39,8 +39,6 @@
         const randomNoise = (Math.random() - 0.5) * 40; 
         const actual = Math.max(0, baseValue + randomNoise);
         const forecast = baseValue * 1.02; 
-        
-        // เพิ่มข้อมูล Upper และ Lower สำหรับกราฟรายวัน
         const upper = forecast * 1.15;
         const lower = forecast * 0.85;
 
@@ -56,22 +54,16 @@
     return data;
   };
 
-  // ฟังก์ชันเวลาของ Production Efficiency รายชม.
   const generateHourlyOEE = () => {
     const data = [];
-    // แก้ไขลูปให้เริ่มที่ (06:00) และจบที่ (17:00)
     for (let i = 6; i <= 17; i++) {
       const hour = i.toString().padStart(2, '0') + ':00';
       let oee = 0;
-
-      // ช่วงพักเที่ยง (12:00) ให้ค่า OEE ต่ำลงเหมือนเดิม
       if (i === 12) {
         oee = 45;
       } else {
-        // ช่วงเวลาทำงานปกติ (07:00-11:00 และ 13:00-16:00) สุ่มค่า OEE สูง (85-95)
         oee = 85 + Math.floor(Math.random() * 10);
       }
-      
       data.push({ label: hour, oee: oee });
     }
     return data;
@@ -108,7 +100,6 @@
     const [alertFilter, setAlertFilter] = useState('all');
     const [alertSearch, setAlertSearch] = useState('');
 
-    // --- Weather Data ---
     const weatherData = {
       temp: 32.5,
       condition: 'Partly Cloudy',
@@ -117,7 +108,6 @@
       pressure: 1012,
     };
 
-    // --- Data Sets ---
     const productionDataSets = {
       daily: generateHourlyOEE(),
       weekly: [
@@ -136,7 +126,6 @@
       ]
     };
     
-    // 2. ค้นหาตัวแปร demandDataSets (ใน Dashboard component) แล้ววางทับด้วยอันนี้
     const demandDataSets = {
       daily: generateDailyData(),
       weekly: [
@@ -169,9 +158,8 @@
       ]
     };
 
-    // State สำหรับหน้า Predictive Analysis
     const [analysisParams, setAnalysisParams] = useState({
-      type: 'full', // full, critical, custom
+      type: 'full',
       horizon: '7',
       options: {
         anomaly: true,
@@ -181,7 +169,6 @@
       }
     });
 
-    // Translation object
     const t = {
       th: {
         title: 'ระบบผลิตอัจฉริยะ',
@@ -407,28 +394,10 @@
       constraints: 'standard'
     });
 
-    // const demandData = [
-    //   { month: 'Jan', actual: 850, forecast: 0, lower: 0, upper: 0 },
-    //   { month: 'Feb', actual: 920, forecast: 0, lower: 0, upper: 0 },
-    //   { month: 'Mar', actual: 880, forecast: 0, lower: 0, upper: 0 },
-    //   { month: 'Apr', actual: 1050, forecast: 0, lower: 0, upper: 0 },
-    //   { month: 'May', actual: 1100, forecast: 0, lower: 0, upper: 0 },
-    //   { month: 'Jun', actual: 1080, forecast: 0, lower: 0, upper: 0 },
-    //   { month: 'Jul', actual: 0, forecast: 1150, lower: 1050, upper: 1250 },
-    //   { month: 'Aug', actual: 0, forecast: 1200, lower: 1100, upper: 1300 },
-    //   { month: 'Sep', actual: 0, forecast: 1180, lower: 1080, upper: 1280 },
-    //   { month: 'Oct', actual: 0, forecast: 1250, lower: 1150, upper: 1350 },
-    // ];
-
     const machineHealth = [
       { 
-        name: 'Inverter101', 
-        health: 65, 
-        status: 'warning', 
-        rul: 45,
-        type: 'Solar Inverter',
-        installDate: '2020-03-15',
-        operatingHours: 18500,
+        name: 'Inverter101', health: 65, status: 'warning', rul: 45,
+        type: 'Solar Inverter', installDate: '2020-03-15', operatingHours: 18500,
         lastMaintenance: '45 days ago',
         sensors: {
           temperature: { value: 75, unit: '°C', status: 'high' },
@@ -442,15 +411,9 @@
           { date: '2024-01-05', type: 'Lubrication', cost: 800 }
         ]
       },
-
       { 
-        name: 'Inverter102', 
-        health: 92, 
-        status: 'good', 
-        rul: 120,
-        type: 'Solar Inverter',
-        installDate: '2021-08-22',
-        operatingHours: 12300,
+        name: 'Inverter102', health: 92, status: 'good', rul: 120,
+        type: 'Solar Inverter', installDate: '2021-08-22', operatingHours: 12300,
         lastMaintenance: '15 days ago',
         sensors: {
           temperature: { value: 62, unit: '°C', status: 'normal' },
@@ -463,15 +426,9 @@
           { date: '2024-04-12', type: 'Calibration', cost: 2100 }
         ]
       },
-
       { 
-        name: 'Irradiation101', 
-        health: 88, 
-        status: 'good', 
-        rul: 95,
-        type: 'Irradiation Sensor',
-        installDate: '2019-11-10',
-        operatingHours: 22100,
+        name: 'Irradiation101', health: 88, status: 'good', rul: 95,
+        type: 'Irradiation Sensor', installDate: '2019-11-10', operatingHours: 22100,
         lastMaintenance: '20 days ago',
         sensors: {
           temperature: { value: 68, unit: '°C', status: 'normal' },
@@ -484,15 +441,9 @@
           { date: '2024-04-01', type: 'Seal Replacement', cost: 4200 }
         ]
       },
-
       { 
-        name: 'Irradiation201', 
-        health: 58, 
-        status: 'critical', 
-        rul: 25,
-        type: 'Irradiation Sensor',
-        installDate: '2018-05-20',
-        operatingHours: 28900,
+        name: 'Irradiation201', health: 58, status: 'critical', rul: 25,
+        type: 'Irradiation Sensor', installDate: '2018-05-20', operatingHours: 28900,
         lastMaintenance: '60 days ago',
         sensors: {
           temperature: { value: 82, unit: '°C', status: 'high' },
@@ -505,15 +456,9 @@
           { date: '2024-02-18', type: 'Routine Inspection', cost: 1200 }
         ]
       },
-
       { 
-        name: 'Inverter103', 
-        health: 85, 
-        status: 'good', 
-        rul: 80,
-        type: 'Solar Inverter',
-        installDate: '2020-09-14',
-        operatingHours: 16200,
+        name: 'Inverter103', health: 85, status: 'good', rul: 80,
+        type: 'Solar Inverter', installDate: '2020-09-14', operatingHours: 16200,
         lastMaintenance: '25 days ago',
         sensors: {
           temperature: { value: 58, unit: '°C', status: 'normal' },
@@ -526,15 +471,9 @@
           { date: '2024-05-01', type: 'Calibration', cost: 1500 }
         ]
       },
-      
       { 
-        name: 'Inverter104', 
-        health: 78, 
-        status: 'warning', 
-        rul: 60,
-        type: 'Solar Inverter',
-        installDate: '2020-09-14',
-        operatingHours: 16800,
+        name: 'Inverter104', health: 78, status: 'warning', rul: 60,
+        type: 'Solar Inverter', installDate: '2020-09-14', operatingHours: 16800,
         lastMaintenance: '30 days ago',
         sensors: {
           temperature: { value: 71, unit: '°C', status: 'high' },
@@ -609,7 +548,6 @@
       return matchFilter && matchSearch;
     });
 
-    // Function to handle forecast
     const handleGenerateForecast = async () => {
       setShowForecastModal(false);
       setIsProcessing(true);
@@ -829,47 +767,51 @@
         </div>
 
         {/* Main Content */}
-        <main className="max-w-7xl mx-auto px-6 py-8">
+        <main className="max-w-8xl mx-auto px-20 py-9">
           
-          {/* --- ส่วน overview --- */}
+          {/* --- Overview Tab --- */}
           {activeTab === 'overview' && (
-            <Overview 
-              theme={theme}
-              currentLang={currentLang}
-              weatherData={weatherData}
-              kpiCards={kpiCards}
-              productionDataSets={productionDataSets}
-              productionPeriod={productionPeriod}
-              setProductionPeriod={setProductionPeriod}
-              demandDataSets={demandDataSets}
-              demandPeriod={demandPeriod}
-              setDemandPeriod={setDemandPeriod}
-              alerts={alerts}
-              unreadCount={unreadCount}
-              markAsRead={markAsRead}
-              markAllAsRead={markAllAsRead}
-              deleteAllAlerts={deleteAllAlerts}
-              deleteAlert={deleteAlert}
-              machineHealth={machineHealth}
-              setSelectedMachine={setSelectedMachine}
-              setShowMachineDetail={setShowMachineDetail}
-              showAllAlerts={showAllAlerts}
-              setShowAllAlerts={setShowAllAlerts}
-              alertSearch={alertSearch}
-              setAlertSearch={setAlertSearch}
-              alertFilter={alertFilter}
-              setAlertFilter={setAlertFilter}
-              filteredAlerts={filteredAlerts}
-            />
+            <div className="space-y-8">
+              <Overview 
+                theme={theme}
+                currentLang={currentLang}
+                weatherData={weatherData}
+                kpiCards={kpiCards}
+                productionDataSets={productionDataSets}
+                productionPeriod={productionPeriod}
+                setProductionPeriod={setProductionPeriod}
+                demandDataSets={demandDataSets}
+                demandPeriod={demandPeriod}
+                setDemandPeriod={setDemandPeriod}
+                alerts={alerts}
+                unreadCount={unreadCount}
+                markAsRead={markAsRead}
+                markAllAsRead={markAllAsRead}
+                deleteAllAlerts={deleteAllAlerts}
+                deleteAlert={deleteAlert}
+                machineHealth={machineHealth}
+                setSelectedMachine={setSelectedMachine}
+                setShowMachineDetail={setShowMachineDetail}
+                showAllAlerts={showAllAlerts}
+                setShowAllAlerts={setShowAllAlerts}
+                alertSearch={alertSearch}
+                setAlertSearch={setAlertSearch}
+                alertFilter={alertFilter}
+                setAlertFilter={setAlertFilter}
+                filteredAlerts={filteredAlerts}
+              />
+
+              {/* ─── Sungrow Live Data Panel ─── */}
+              <SungrowLivePanel theme={theme} />
+            </div>
           )}
 
-          {/* --- ส่วน Forecast --- */}
+          {/* --- Forecast Tab --- */}
           {activeTab === 'forecast' && (
             <Forecast 
               theme={theme}
               language={language}
               currentLang={currentLang}
-              // เปลี่ยนจาก demandData เป็น 3 บรรทัดนี้ครับ:
               demandDataSets={demandDataSets} 
               demandPeriod={demandPeriod}
               setDemandPeriod={setDemandPeriod}
@@ -877,7 +819,7 @@
             />
           )}
 
-          {/* --- ส่วน Maintenance --- */}
+          {/* --- Maintenance Tab --- */}
           {activeTab === 'maintenance' && (
             <Maintenance 
               theme={theme}
@@ -890,14 +832,14 @@
             />
           )}
 
-          {/* --- ส่วน Planning  --- */}
+          {/* --- Planning Tab --- */}
           {activeTab === 'planning' && (
             <Planning 
                 theme={theme}
                 language={language}
                 currentLang={currentLang}
                 setShowPlanningModal={setShowPlanningModal}
-                machineHealth={machineHealth}  // ← เพิ่ม
+                machineHealth={machineHealth}
                 handleOpenSchedule={handleOpenSchedule}
             />
           )}
@@ -919,122 +861,41 @@
         {showForecastModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
             <div className={`w-full max-w-lg rounded-xl shadow-2xl overflow-hidden ${theme === 'dark' ? 'bg-[#1e293b]' : 'bg-white'} zoom-in-95 duration-200`}>
-              
-              {/* Header */}
               <div className={`px-6 py-4 border-b flex justify-between items-center ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>
-                <h3 className={`text-lg font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
-                  {currentLang.generateForecast}
-                </h3>
-                <button 
-                  onClick={() => setShowForecastModal(false)}
-                  className={`p-1 rounded-full hover:bg-slate-100 transition ${theme === 'dark' ? 'text-slate-400 hover:bg-slate-700' : 'text-slate-500'}`}
-                >
-                  <X className="w-5 h-5" />
-                </button>
+                <h3 className={`text-lg font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{currentLang.generateForecast}</h3>
+                <button onClick={() => setShowForecastModal(false)} className={`p-1 rounded-full hover:bg-slate-100 transition ${theme === 'dark' ? 'text-slate-400 hover:bg-slate-700' : 'text-slate-500'}`}><X className="w-5 h-5" /></button>
               </div>
-
-              {/* Body */}
               <div className="p-6 space-y-5">
-                
-                {/* Forecast Horizon */}
                 <div>
-                  <label className={`block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
-                    {language === 'th' ? 'ระยะเวลาการพยากรณ์ (วัน)' : 'Forecast Horizon (Days)'}
-                  </label>
-                  <input 
-                    type="number" 
-                    value={forecastParams.horizon} 
-                    onChange={(e) => setForecastParams({...forecastParams, horizon: parseInt(e.target.value)})} 
-                    className={`w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition ${
-                      theme === 'dark' 
-                        ? 'bg-slate-800 border-slate-600 text-white' 
-                        : 'bg-white border-slate-300 text-slate-900'
-                    }`}
-                  />
+                  <label className={`block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>{language === 'th' ? 'ระยะเวลาการพยากรณ์ (วัน)' : 'Forecast Horizon (Days)'}</label>
+                  <input type="number" value={forecastParams.horizon} onChange={(e) => setForecastParams({...forecastParams, horizon: parseInt(e.target.value)})} className={`w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition ${theme === 'dark' ? 'bg-slate-800 border-slate-600 text-white' : 'bg-white border-slate-300 text-slate-900'}`} />
                 </div>
-
-                {/* Products Checkboxes */}
                 <div>
-                  <label className={`block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
-                    Products
-                  </label>
+                  <label className={`block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>Products</label>
                   <div className="space-y-2">
                     {['PROD-001', 'PROD-002', 'PROD-003'].map((prod) => (
                       <label key={prod} className="flex items-center gap-3 cursor-pointer group">
-                        <input 
-                          type="checkbox" 
-                          checked={forecastParams.products.includes(prod)}
-                          onChange={(e) => {
-                            const newProducts = e.target.checked
-                              ? [...forecastParams.products, prod]
-                              : forecastParams.products.filter(p => p !== prod);
-                            setForecastParams({...forecastParams, products: newProducts});
-                          }}
-                          className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                        />
-                        <span className={`text-sm group-hover:opacity-80 transition ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
-                          {prod}
-                        </span>
+                        <input type="checkbox" checked={forecastParams.products.includes(prod)} onChange={(e) => { const newProducts = e.target.checked ? [...forecastParams.products, prod] : forecastParams.products.filter(p => p !== prod); setForecastParams({...forecastParams, products: newProducts}); }} className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" />
+                        <span className={`text-sm group-hover:opacity-80 transition ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>{prod}</span>
                       </label>
                     ))}
                   </div>
                 </div>
-
-                {/* Confidence Level */}
                 <div>
-                  <label className={`block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
-                    Confidence Level
-                  </label>
-                  <select 
-                    value={forecastParams.confidenceLevel}
-                    onChange={(e) => setForecastParams({...forecastParams, confidenceLevel: parseFloat(e.target.value)})}
-                    className={`w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none appearance-none ${
-                      theme === 'dark' 
-                        ? 'bg-slate-800 border-slate-600 text-white' 
-                        : 'bg-white border-slate-300 text-slate-900'
-                    }`}
-                  >
-                    <option value={0.90}>90%</option>
-                    <option value={0.95}>95%</option>
-                    <option value={0.99}>99%</option>
+                  <label className={`block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>Confidence Level</label>
+                  <select value={forecastParams.confidenceLevel} onChange={(e) => setForecastParams({...forecastParams, confidenceLevel: parseFloat(e.target.value)})} className={`w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none appearance-none ${theme === 'dark' ? 'bg-slate-800 border-slate-600 text-white' : 'bg-white border-slate-300 text-slate-900'}`}>
+                    <option value={0.90}>90%</option><option value={0.95}>95%</option><option value={0.99}>99%</option>
                   </select>
                 </div>
-
-                {/* Include Confidence Intervals */}
                 <label className="flex items-center gap-3 cursor-pointer group">
-                  <input 
-                    type="checkbox" 
-                    checked={forecastParams.includeConfidence}
-                    onChange={(e) => setForecastParams({...forecastParams, includeConfidence: e.target.checked})}
-                    className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                  />
-                  <span className={`text-sm font-medium group-hover:opacity-80 transition ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
-                    Include confidence intervals
-                  </span>
+                  <input type="checkbox" checked={forecastParams.includeConfidence} onChange={(e) => setForecastParams({...forecastParams, includeConfidence: e.target.checked})} className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" />
+                  <span className={`text-sm font-medium group-hover:opacity-80 transition ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>Include confidence intervals</span>
                 </label>
-
               </div>
-
-              {/* Footer Buttons */}
               <div className={`px-6 py-4 border-t flex justify-end gap-3 ${theme === 'dark' ? 'border-slate-700 bg-slate-800/50' : 'border-slate-100 bg-slate-50'}`}>
-                <button 
-                  onClick={() => setShowForecastModal(false)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium border transition ${
-                    theme === 'dark' 
-                      ? 'border-slate-600 text-slate-300 hover:bg-slate-700' 
-                      : 'border-slate-300 text-slate-700 hover:bg-white hover:shadow-sm'
-                  }`}
-                >
-                  {currentLang.cancel}
-                </button>
-                <button 
-                  onClick={handleGenerateForecast}
-                  className="px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 shadow-md transition hover:shadow-lg hover:-translate-y-0.5"
-                >
-                  {currentLang.generateForecast}
-                </button>
+                <button onClick={() => setShowForecastModal(false)} className={`px-4 py-2 rounded-lg text-sm font-medium border transition ${theme === 'dark' ? 'border-slate-600 text-slate-300 hover:bg-slate-700' : 'border-slate-300 text-slate-700 hover:bg-white hover:shadow-sm'}`}>{currentLang.cancel}</button>
+                <button onClick={handleGenerateForecast} className="px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 shadow-md transition hover:shadow-lg hover:-translate-y-0.5">{currentLang.generateForecast}</button>
               </div>
-
             </div>
           </div>
         )}
@@ -1043,118 +904,45 @@
         {showPlanningModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
             <div className={`w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden ${theme === 'dark' ? 'bg-[#1e293b]' : 'bg-white'} zoom-in-95 duration-200`}>
-              
-              {/* Header */}
               <div className={`px-6 py-4 border-b flex justify-between items-center ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>
-                <h3 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
-                  Optimize Production Schedule
-                </h3>
-                <button 
-                  onClick={() => setShowPlanningModal(false)}
-                  className={`p-1 rounded-full hover:bg-slate-100 transition ${theme === 'dark' ? 'text-slate-400 hover:bg-slate-700' : 'text-slate-500'}`}
-                >
-                  <X className="w-6 h-6" />
-                </button>
+                <h3 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>Optimize Production Schedule</h3>
+                <button onClick={() => setShowPlanningModal(false)} className={`p-1 rounded-full hover:bg-slate-100 transition ${theme === 'dark' ? 'text-slate-400 hover:bg-slate-700' : 'text-slate-500'}`}><X className="w-6 h-6" /></button>
               </div>
-
-              {/* Body */}
               <div className="p-6 space-y-6">
-                
-                {/* Date Range Row */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className={`block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
-                      Start Date
-                    </label>
-                    <input 
-                      type="date" 
-                      value={planningParams.startDate} 
-                      onChange={(e) => setPlanningParams({...planningParams, startDate: e.target.value})}
-                      className={`w-full px-4 py-2.5 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition ${
-                        theme === 'dark' ? 'bg-slate-800 border-slate-600 text-white' : 'bg-white border-slate-300 text-slate-900'
-                      }`}
-                    />
+                    <label className={`block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>Start Date</label>
+                    <input type="date" value={planningParams.startDate} onChange={(e) => setPlanningParams({...planningParams, startDate: e.target.value})} className={`w-full px-4 py-2.5 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition ${theme === 'dark' ? 'bg-slate-800 border-slate-600 text-white' : 'bg-white border-slate-300 text-slate-900'}`} />
                   </div>
                   <div>
-                    <label className={`block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
-                      End Date
-                    </label>
-                    <input 
-                      type="date" 
-                      value={planningParams.endDate} 
-                      onChange={(e) => setPlanningParams({...planningParams, endDate: e.target.value})}
-                      className={`w-full px-4 py-2.5 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition ${
-                        theme === 'dark' ? 'bg-slate-800 border-slate-600 text-white' : 'bg-white border-slate-300 text-slate-900'
-                      }`}
-                    />
+                    <label className={`block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>End Date</label>
+                    <input type="date" value={planningParams.endDate} onChange={(e) => setPlanningParams({...planningParams, endDate: e.target.value})} className={`w-full px-4 py-2.5 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition ${theme === 'dark' ? 'bg-slate-800 border-slate-600 text-white' : 'bg-white border-slate-300 text-slate-900'}`} />
                   </div>
                 </div>
-
-                {/* Optimization Objective */}
                 <div>
-                  <label className={`block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
-                    Optimization Objective
-                  </label>
-                  <select 
-                    value={planningParams.objective}
-                    onChange={(e) => setPlanningParams({...planningParams, objective: e.target.value})}
-                    className={`w-full px-4 py-2.5 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none appearance-none ${
-                      theme === 'dark' ? 'bg-slate-800 border-slate-600 text-white' : 'bg-white border-slate-300 text-slate-900'
-                    }`}
-                  >
+                  <label className={`block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>Optimization Objective</label>
+                  <select value={planningParams.objective} onChange={(e) => setPlanningParams({...planningParams, objective: e.target.value})} className={`w-full px-4 py-2.5 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none appearance-none ${theme === 'dark' ? 'bg-slate-800 border-slate-600 text-white' : 'bg-white border-slate-300 text-slate-900'}`}>
                     <option value="minimize_cost">Minimize Production Cost</option>
                     <option value="maximize_output">Maximize Output</option>
                     <option value="balance_load">Balance Machine Load</option>
                   </select>
                 </div>
-
-                {/* Constraints Profile */}
                 <div>
-                  <label className={`block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
-                    Constraints Profile
-                  </label>
-                  <select 
-                    value={planningParams.constraints}
-                    onChange={(e) => setPlanningParams({...planningParams, constraints: e.target.value})}
-                    className={`w-full px-4 py-2.5 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none appearance-none ${
-                      theme === 'dark' ? 'bg-slate-800 border-slate-600 text-white' : 'bg-white border-slate-300 text-slate-900'
-                    }`}
-                  >
+                  <label className={`block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>Constraints Profile</label>
+                  <select value={planningParams.constraints} onChange={(e) => setPlanningParams({...planningParams, constraints: e.target.value})} className={`w-full px-4 py-2.5 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none appearance-none ${theme === 'dark' ? 'bg-slate-800 border-slate-600 text-white' : 'bg-white border-slate-300 text-slate-900'}`}>
                     <option value="standard">Standard Constraints</option>
                     <option value="strict">Strict Deadlines</option>
                     <option value="flexible">Flexible Resource Allocation</option>
                   </select>
                 </div>
-
-                {/* Info Box */}
                 <div className={`p-4 rounded-lg border ${theme === 'dark' ? 'bg-blue-900/20 border-blue-800 text-blue-200' : 'bg-blue-50 border-blue-200 text-blue-800'}`}>
-                  <p className="text-sm">
-                    <span className="font-bold">Note:</span> Optimization may take 3-5 minutes depending on complexity. You'll receive a notification when complete.
-                  </p>
+                  <p className="text-sm"><span className="font-bold">Note:</span> Optimization may take 3-5 minutes depending on complexity. You'll receive a notification when complete.</p>
                 </div>
-
               </div>
-
-              {/* Footer Buttons */}
               <div className={`px-6 py-4 border-t flex justify-end gap-3 ${theme === 'dark' ? 'border-slate-700 bg-slate-800/50' : 'border-slate-100 bg-slate-50'}`}>
-                <button 
-                  onClick={() => setShowPlanningModal(false)}
-                  className={`px-6 py-2.5 rounded-lg text-sm font-medium border transition ${
-                    theme === 'dark' 
-                      ? 'border-slate-600 text-slate-300 hover:bg-slate-700' 
-                      : 'border-slate-300 text-slate-700 hover:bg-white hover:shadow-sm'
-                  }`}
-                >
-                  Cancel
-                </button>
-                <button 
-                  onClick={handleOptimizeSchedule}
-                  className="px-6 py-2.5 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 shadow-md transition hover:shadow-lg hover:-translate-y-0.5"
-                >
-                  Start Optimization
-                </button>
+                <button onClick={() => setShowPlanningModal(false)} className={`px-6 py-2.5 rounded-lg text-sm font-medium border transition ${theme === 'dark' ? 'border-slate-600 text-slate-300 hover:bg-slate-700' : 'border-slate-300 text-slate-700 hover:bg-white hover:shadow-sm'}`}>Cancel</button>
+                <button onClick={handleOptimizeSchedule} className="px-6 py-2.5 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 shadow-md transition hover:shadow-lg hover:-translate-y-0.5">Start Optimization</button>
               </div>
-
             </div>
           </div>
         )}
@@ -1163,251 +951,37 @@
         {showAnalysisModal && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-in fade-in duration-200">
             <div className={`${theme === 'dark' ? 'bg-[#1e293b]' : 'bg-white'} rounded-xl w-full shadow-2xl overflow-hidden`} style={{ maxWidth: '650px' }}>
-              
-              {/* Header */}
               <div className={`px-6 py-4 border-b flex items-center justify-between ${theme === 'dark' ? 'border-slate-700' : 'border-slate-100'}`}>
-                <h2 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
-                  Run Predictive Analysis
-                </h2>
-                <button 
-                  onClick={() => setShowAnalysisModal(false)} 
-                  className={`p-1 rounded-full hover:bg-slate-100 transition ${theme === 'dark' ? 'text-slate-400 hover:bg-slate-700' : 'text-slate-400'}`}
-                >
-                  <X className="w-6 h-6" />
-                </button>
+                <h2 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>Run Predictive Analysis</h2>
+                <button onClick={() => setShowAnalysisModal(false)} className={`p-1 rounded-full hover:bg-slate-100 transition ${theme === 'dark' ? 'text-slate-400 hover:bg-slate-700' : 'text-slate-400'}`}><X className="w-6 h-6" /></button>
               </div>
-
-              {/* Body */}
               <div className="p-6 space-y-6">
-                
-                {/* 1. Analysis Type */}
                 <div>
                   <label className={`block text-sm font-semibold mb-3 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>Analysis Type</label>
-                  <div className="space-y-3">
-                    
-                    {/* Option 1 */}
-                    <label className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${
-                      analysisParams.type === 'full' 
-                        ? (theme === 'dark' ? 'border-blue-500 bg-blue-900/20' : 'border-blue-500 bg-blue-50') 
-                        : (theme === 'dark' ? 'border-slate-600 hover:border-slate-500' : 'border-slate-200 hover:border-blue-300')
-                    }`}>
-                      <div className="flex items-center gap-3">
-                        <input 
-                          type="radio" 
-                          name="analysisType" 
-                          checked={analysisParams.type === 'full'} 
-                          onChange={() => setAnalysisParams({...analysisParams, type: 'full'})}
-                          className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                        />
-                        <span className={`text-sm font-medium ${theme === 'dark' ? 'text-slate-200' : 'text-slate-700'}`}>Full System Analysis (All Machines)</span>
-                      </div>
-                      <span className={`text-xs ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>~4 min</span>
-                    </label>
-
-                    {/* Option 2 */}
-                    <label className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${
-                      analysisParams.type === 'critical' 
-                        ? (theme === 'dark' ? 'border-blue-500 bg-blue-900/20' : 'border-blue-500 bg-blue-50') 
-                        : (theme === 'dark' ? 'border-slate-600 hover:border-slate-500' : 'border-slate-200 hover:border-blue-300')
-                    }`}>
-                      <div className="flex items-center gap-3">
-                        <input 
-                          type="radio" 
-                          name="analysisType" 
-                          checked={analysisParams.type === 'critical'} 
-                          onChange={() => setAnalysisParams({...analysisParams, type: 'critical'})}
-                          className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                        />
-                        <span className={`text-sm font-medium ${theme === 'dark' ? 'text-slate-200' : 'text-slate-700'}`}>Critical Machines Only</span>
-                      </div>
-                      <span className={`text-xs ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>~2 min</span>
-                    </label>
-
-                    {/* Option 3 */}
-                    <label className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${
-                      analysisParams.type === 'custom' 
-                        ? (theme === 'dark' ? 'border-blue-500 bg-blue-900/20' : 'border-blue-500 bg-blue-50') 
-                        : (theme === 'dark' ? 'border-slate-600 hover:border-slate-500' : 'border-slate-200 hover:border-blue-300')
-                    }`}>
-                      <div className="flex items-center gap-3">
-                        <input 
-                          type="radio" 
-                          name="analysisType" 
-                          checked={analysisParams.type === 'custom'} 
-                          onChange={() => setAnalysisParams({...analysisParams, type: 'custom'})}
-                          className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                        />
-                        <span className={`text-sm font-medium ${theme === 'dark' ? 'text-slate-200' : 'text-slate-700'}`}>Custom Selection</span>
-                      </div>
-                      <span className={`text-xs ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Variable</span>
-                    </label>
-                  </div>
-                </div>
-
-                {/* 2. Prediction Horizon */}
-                <div>
-                  <label className={`block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>Prediction Horizon</label>
-                  <select 
-                    value={analysisParams.horizon}
-                    onChange={(e) => setAnalysisParams({...analysisParams, horizon: e.target.value})}
-                    className={`w-full px-4 py-2.5 rounded-lg border outline-none appearance-none transition ${
-                      theme === 'dark' ? 'bg-slate-800 border-slate-600 text-white focus:border-blue-500' : 'bg-white border-slate-300 text-slate-900 focus:border-blue-500'
-                    }`}
-                  >
-                    <option value="7">Next 7 days</option>
-                    <option value="14">Next 14 days</option>
-                    <option value="30">Next 30 days</option>
-                    <option value="90">Next 3 months</option>
-                  </select>
-                </div>
-
-                {/* 3. Analysis Options */}
-                <div>
-                  <label className={`block text-sm font-semibold mb-3 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>Analysis Options</label>
-                  <div className="space-y-3">
-                    {[
-                      { key: 'anomaly', label: 'Include anomaly detection' },
-                      { key: 'maintenance', label: 'Generate maintenance recommendations' },
-                      { key: 'cost', label: 'Calculate cost impact' },
-                      { key: 'report', label: 'Export detailed report (PDF)' },
-                    ].map((opt) => (
-                      <label key={opt.key} className="flex items-center gap-3 cursor-pointer group">
-                        <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
-                          analysisParams.options[opt.key] 
-                            ? 'bg-blue-600 border-blue-600' 
-                            : theme === 'dark' ? 'border-slate-500 bg-slate-800' : 'border-gray-300 bg-white'
-                        }`}>
-                          {analysisParams.options[opt.key] && <CheckCircle className="w-3.5 h-3.5 text-white" />}
-                          <input 
-                            type="checkbox" 
-                            className="hidden"
-                            checked={analysisParams.options[opt.key]}
-                            onChange={(e) => setAnalysisParams({
-                              ...analysisParams, 
-                              options: { ...analysisParams.options, [opt.key]: e.target.checked }
-                            })}
-                          />
-                        </div>
-                        <span className={`text-sm ${theme === 'dark' ? 'text-slate-300 group-hover:text-white' : 'text-slate-600 group-hover:text-slate-900'}`}>
-                          {opt.label}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-              </div>
-
-              {/* Footer Buttons */}
-              <div className={`px-6 py-4 border-t flex justify-end gap-3 ${theme === 'dark' ? 'border-slate-700 bg-slate-800/50' : 'border-slate-100 bg-slate-50'}`}>
-                <button 
-                  onClick={() => setShowAnalysisModal(false)} 
-                  className={`px-6 py-2.5 rounded-lg text-sm font-medium border transition ${
-                    theme === 'dark' ? 'border-slate-600 text-slate-300 hover:bg-slate-700' : 'border-slate-300 text-slate-600 hover:bg-white hover:shadow-sm'
-                  }`}
-                >
-                  Cancel
-                </button>
-                <button 
-                  onClick={handleRunAnalysis} 
-                  className="px-6 py-2.5 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 shadow-md transition hover:shadow-lg hover:-translate-y-0.5"
-                >
-                  Run Analysis
-                </button>
-              </div>
-
-            </div>
-          </div>
-        )}
-        
-        {/* Analysis Modal (Updated UI) */}
-        {showAnalysisModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-in fade-in duration-200">
-            <div className={`${theme === 'dark' ? 'bg-[#1e293b]' : 'bg-white'} rounded-xl w-full shadow-2xl overflow-hidden`} style={{ maxWidth: '650px' }}>
-              
-              {/* Header */}
-              <div className={`px-6 py-4 border-b flex items-center justify-between ${theme === 'dark' ? 'border-slate-700' : 'border-slate-100'}`}>
-                <h2 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
-                  Run Predictive Analysis
-                </h2>
-                <button 
-                  onClick={() => setShowAnalysisModal(false)} 
-                  className={`p-1 rounded-full hover:bg-slate-100 transition ${theme === 'dark' ? 'text-slate-400 hover:bg-slate-700' : 'text-slate-400'}`}
-                >
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
-
-              {/* Body */}
-              <div className="p-6 space-y-6">
-                
-                {/* 1. Analysis Type */}
-                <div>
-                  <label className={`block text-sm font-semibold mb-3 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
-                    Analysis Type
-                  </label>
                   <div className="space-y-3">
                     {[
                       { id: 'full', label: 'Full System Analysis (All Machines)', time: '~4 min' },
                       { id: 'critical', label: 'Critical Machines Only', time: '~2 min' },
                       { id: 'custom', label: 'Custom Selection', time: 'Variable' }
                     ].map((option) => (
-                      <div
-                        key={option.id}
-                        onClick={() => setAnalysisParams({ ...analysisParams, type: option.id })}
-                        className={`relative flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ease-in-out ${
-                          analysisParams.type === option.id
-                            ? (theme === 'dark' ? 'border-blue-500 bg-blue-900/30' : 'border-blue-600 bg-blue-50')
-                            : (theme === 'dark' ? 'border-slate-700 hover:border-slate-600 bg-slate-800' : 'border-slate-200 hover:border-blue-300 bg-white')
-                        }`}
-                      >
+                      <div key={option.id} onClick={() => setAnalysisParams({ ...analysisParams, type: option.id })} className={`relative flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ease-in-out ${analysisParams.type === option.id ? (theme === 'dark' ? 'border-blue-500 bg-blue-900/30' : 'border-blue-600 bg-blue-50') : (theme === 'dark' ? 'border-slate-700 hover:border-slate-600 bg-slate-800' : 'border-slate-200 hover:border-blue-300 bg-white')}`}>
                         <div className="flex items-center gap-3">
-                          {/* Custom Radio Circle */}
-                          <div className={`flex items-center justify-center w-5 h-5 rounded-full border transition-all duration-200 ${
-                            analysisParams.type === option.id
-                              ? 'border-blue-600 bg-blue-600'
-                              : (theme === 'dark' ? 'border-slate-500 bg-transparent' : 'border-slate-300 bg-white')
-                          }`}>
-                            {analysisParams.type === option.id && (
-                              <div className="w-2 h-2 bg-white rounded-full shadow-sm" />
-                            )}
+                          <div className={`flex items-center justify-center w-5 h-5 rounded-full border transition-all duration-200 ${analysisParams.type === option.id ? 'border-blue-600 bg-blue-600' : (theme === 'dark' ? 'border-slate-500 bg-transparent' : 'border-slate-300 bg-white')}`}>
+                            {analysisParams.type === option.id && <div className="w-2 h-2 bg-white rounded-full shadow-sm" />}
                           </div>
-                          
-                          <span className={`font-medium ${theme === 'dark' ? 'text-slate-200' : 'text-slate-700'}`}>
-                            {option.label}
-                          </span>
+                          <span className={`font-medium ${theme === 'dark' ? 'text-slate-200' : 'text-slate-700'}`}>{option.label}</span>
                         </div>
-                        
-                        <span className={`text-xs font-medium px-2 py-1 rounded-md ${
-                          theme === 'dark' 
-                            ? 'bg-slate-700 text-slate-400' 
-                            : 'bg-slate-100 text-slate-500'
-                        }`}>
-                          {option.time}
-                        </span>
+                        <span className={`text-xs font-medium px-2 py-1 rounded-md ${theme === 'dark' ? 'bg-slate-700 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>{option.time}</span>
                       </div>
                     ))}
                   </div>
                 </div>
-
-                {/* 2. Prediction Horizon */}
                 <div>
                   <label className={`block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>Prediction Horizon</label>
-                  <select 
-                    value={analysisParams.horizon}
-                    onChange={(e) => setAnalysisParams({...analysisParams, horizon: e.target.value})}
-                    className={`w-full px-4 py-2.5 rounded-lg border outline-none appearance-none transition ${
-                      theme === 'dark' ? 'bg-slate-800 border-slate-600 text-white focus:border-blue-500' : 'bg-white border-slate-300 text-slate-900 focus:border-blue-500'
-                    }`}
-                  >
-                    <option value="7">Next 7 days</option>
-                    <option value="14">Next 14 days</option>
-                    <option value="30">Next 30 days</option>
-                    <option value="90">Next 3 months</option>
+                  <select value={analysisParams.horizon} onChange={(e) => setAnalysisParams({...analysisParams, horizon: e.target.value})} className={`w-full px-4 py-2.5 rounded-lg border outline-none appearance-none transition ${theme === 'dark' ? 'bg-slate-800 border-slate-600 text-white focus:border-blue-500' : 'bg-white border-slate-300 text-slate-900 focus:border-blue-500'}`}>
+                    <option value="7">Next 7 days</option><option value="14">Next 14 days</option><option value="30">Next 30 days</option><option value="90">Next 3 months</option>
                   </select>
                 </div>
-
-                {/* 3. Analysis Options */}
                 <div>
                   <label className={`block text-sm font-semibold mb-3 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>Analysis Options</label>
                   <div className="space-y-3">
@@ -1418,229 +992,86 @@
                       { key: 'report', label: 'Export detailed report (PDF)' },
                     ].map((opt) => (
                       <label key={opt.key} className="flex items-center gap-3 cursor-pointer group">
-                        <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
-                          analysisParams.options[opt.key] 
-                            ? 'bg-blue-600 border-blue-600' 
-                            : theme === 'dark' ? 'border-slate-500 bg-slate-800' : 'border-gray-300 bg-white'
-                        }`}>
+                        <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${analysisParams.options[opt.key] ? 'bg-blue-600 border-blue-600' : theme === 'dark' ? 'border-slate-500 bg-slate-800' : 'border-gray-300 bg-white'}`}>
                           {analysisParams.options[opt.key] && <CheckCircle className="w-3.5 h-3.5 text-white" />}
-                          <input 
-                            type="checkbox" 
-                            className="hidden"
-                            checked={analysisParams.options[opt.key]}
-                            onChange={(e) => setAnalysisParams({
-                              ...analysisParams, 
-                              options: { ...analysisParams.options, [opt.key]: e.target.checked }
-                            })}
-                          />
+                          <input type="checkbox" className="hidden" checked={analysisParams.options[opt.key]} onChange={(e) => setAnalysisParams({...analysisParams, options: { ...analysisParams.options, [opt.key]: e.target.checked }})} />
                         </div>
-                        <span className={`text-sm ${theme === 'dark' ? 'text-slate-300 group-hover:text-white' : 'text-slate-600 group-hover:text-slate-900'}`}>
-                          {opt.label}
-                        </span>
+                        <span className={`text-sm ${theme === 'dark' ? 'text-slate-300 group-hover:text-white' : 'text-slate-600 group-hover:text-slate-900'}`}>{opt.label}</span>
                       </label>
                     ))}
                   </div>
                 </div>
-
               </div>
-
-              {/* Footer Buttons */}
               <div className={`px-6 py-4 border-t flex justify-end gap-3 ${theme === 'dark' ? 'border-slate-700 bg-slate-800/50' : 'border-slate-100 bg-slate-50'}`}>
-                <button 
-                  onClick={() => setShowAnalysisModal(false)} 
-                  className={`px-6 py-2.5 rounded-lg text-sm font-medium border transition ${
-                    theme === 'dark' ? 'border-slate-600 text-slate-300 hover:bg-slate-700' : 'border-slate-300 text-slate-600 hover:bg-white hover:shadow-sm'
-                  }`}
-                >
-                  Cancel
-                </button>
-                <button 
-                  onClick={handleRunAnalysis} 
-                  className="px-6 py-2.5 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 shadow-md transition hover:shadow-lg hover:-translate-y-0.5"
-                >
-                  Run Analysis
-                </button>
+                <button onClick={() => setShowAnalysisModal(false)} className={`px-6 py-2.5 rounded-lg text-sm font-medium border transition ${theme === 'dark' ? 'border-slate-600 text-slate-300 hover:bg-slate-700' : 'border-slate-300 text-slate-600 hover:bg-white hover:shadow-sm'}`}>Cancel</button>
+                <button onClick={handleRunAnalysis} className="px-6 py-2.5 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 shadow-md transition hover:shadow-lg hover:-translate-y-0.5">Run Analysis</button>
               </div>
-
             </div>
           </div>
         )}
 
         {/* Schedule Modal */}
         {showScheduleModal && selectedMachine && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-in fade-in duration-200">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-in fade-in duration-200">
             <div className={`${theme === 'dark' ? 'bg-[#1e293b]' : 'bg-white'} rounded-xl w-full shadow-2xl overflow-hidden`} style={{ maxWidth: '600px' }}>
-              
-              {/* Header */}
               <div className={`px-6 py-4 border-b flex items-start justify-between ${theme === 'dark' ? 'border-slate-700' : 'border-slate-100'}`}>
                 <div>
-                  <h2 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
-                    {scheduleType === 'urgent' ? currentLang.urgentMaintenance : currentLang.routineInspection}
-                  </h2>
-                  <p className={`text-sm mt-1 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
-                    {selectedMachine.name} - {selectedMachine.type}
-                  </p>
+                  <h2 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{scheduleType === 'urgent' ? currentLang.urgentMaintenance : currentLang.routineInspection}</h2>
+                  <p className={`text-sm mt-1 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>{selectedMachine.name} - {selectedMachine.type}</p>
                 </div>
-                <button 
-                  onClick={() => setShowScheduleModal(false)} 
-                  className={`p-1 rounded-full hover:bg-slate-100 transition ${theme === 'dark' ? 'text-slate-400 hover:bg-slate-700' : 'text-slate-400'}`}
-                >
-                  <X className="w-6 h-6" />
-                </button>
+                <button onClick={() => setShowScheduleModal(false)} className={`p-1 rounded-full hover:bg-slate-100 transition ${theme === 'dark' ? 'text-slate-400 hover:bg-slate-700' : 'text-slate-400'}`}><X className="w-6 h-6" /></button>
               </div>
-
-              {/* Body */}
               <div className="p-6 space-y-5">
-
-                {/* Urgent Alert Box */}
                 {scheduleType === 'urgent' && (
-                  <div className="bg-red-50 border border-red-100 rounded-lg p-4 flex gap-3 items-start animate-in zoom-in-95 duration-200">
-                    <div className="mt-0.5 p-1 bg-red-100 rounded-full">
-                      <AlertTriangle className="w-4 h-4 text-red-600" />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-red-700">Urgent Action Required!</h4>
-                      <p className="text-xs text-red-600 mt-1">
-                        Machine has high risk of failure. Recommended action within 7 days
-                      </p>
-                    </div>
+                  <div className="bg-red-50 border border-red-100 rounded-lg p-4 flex gap-3 items-start">
+                    <div className="mt-0.5 p-1 bg-red-100 rounded-full"><AlertTriangle className="w-4 h-4 text-red-600" /></div>
+                    <div><h4 className="text-sm font-bold text-red-700">Urgent Action Required!</h4><p className="text-xs text-red-600 mt-1">Machine has high risk of failure. Recommended action within 7 days</p></div>
                   </div>
                 )}
-                
-                {/* Date & Time Row */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className={`block text-xs font-semibold mb-1.5 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>Select Date</label>
-                    <input 
-                      type="date" 
-                      value={scheduleForm.date} 
-                      onChange={(e) => setScheduleForm({...scheduleForm, date: e.target.value})} 
-                      className={`w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition ${
-                        theme === 'dark' ? 'bg-slate-800 border-slate-600 text-white' : 'bg-white border-slate-300 text-slate-900'
-                      }`} 
-                    />
+                    <input type="date" value={scheduleForm.date} onChange={(e) => setScheduleForm({...scheduleForm, date: e.target.value})} className={`w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition ${theme === 'dark' ? 'bg-slate-800 border-slate-600 text-white' : 'bg-white border-slate-300 text-slate-900'}`} />
                   </div>
                   <div>
                     <label className={`block text-xs font-semibold mb-1.5 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>Select Time <span className="text-red-500">*</span></label>
-                    <input 
-                      type="time" 
-                      value={scheduleForm.time} 
-                      onChange={(e) => setScheduleForm({...scheduleForm, time: e.target.value})} 
-                      className={`w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition ${
-                        theme === 'dark' ? 'bg-slate-800 border-slate-600 text-white' : 'bg-white border-slate-300 text-slate-900'
-                      }`} 
-                    />
+                    <input type="time" value={scheduleForm.time} onChange={(e) => setScheduleForm({...scheduleForm, time: e.target.value})} className={`w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition ${theme === 'dark' ? 'bg-slate-800 border-slate-600 text-white' : 'bg-white border-slate-300 text-slate-900'}`} />
                   </div>
                 </div>
-
-                {/* Technician */}
                 <div>
                   <label className={`block text-xs font-semibold mb-1.5 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>Assign Technician <span className="text-red-500">*</span></label>
-                  <select 
-                    value={scheduleForm.technician} 
-                    onChange={(e) => setScheduleForm({...scheduleForm, technician: e.target.value})} 
-                    className={`w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition ${
-                      theme === 'dark' ? 'bg-slate-800 border-slate-600 text-white' : 'bg-white border-slate-300 text-slate-900'
-                    }`}
-                  >
+                  <select value={scheduleForm.technician} onChange={(e) => setScheduleForm({...scheduleForm, technician: e.target.value})} className={`w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition ${theme === 'dark' ? 'bg-slate-800 border-slate-600 text-white' : 'bg-white border-slate-300 text-slate-900'}`}>
                     <option value="">{currentLang.selectTechnician}</option>
                     <option value="tech1">Sarah Connor (Senior)</option>
                     <option value="tech2">John Doe (Junior)</option>
                     <option value="tech3">Mike Ross (Specialist)</option>
                   </select>
                 </div>
-
-                {/* Priority */}
                 <div>
                   <label className={`block text-xs font-semibold mb-1.5 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>Priority</label>
                   <div className="flex gap-3">
                     {['Low', 'Medium', 'High'].map((level) => (
-                      <button
-                        key={level}
-                        onClick={() => setScheduleForm({...scheduleForm, priority: level.toLowerCase()})}
-                        className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
-                          scheduleForm.priority === level.toLowerCase()
-                            ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-600 ring-offset-1'
-                            : theme === 'dark' ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                        }`}
-                      >
-                        {level}
-                      </button>
+                      <button key={level} onClick={() => setScheduleForm({...scheduleForm, priority: level.toLowerCase()})} className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${scheduleForm.priority === level.toLowerCase() ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-600 ring-offset-1' : theme === 'dark' ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{level}</button>
                     ))}
                   </div>
                 </div>
-
-                {/* Additional Notes */}
                 <div>
                   <label className={`block text-xs font-semibold mb-1.5 ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>Additional Notes</label>
-                  <textarea 
-                    rows="3"
-                    placeholder="Specify details, symptoms found, or special requests..."
-                    className={`w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none resize-none transition ${
-                      theme === 'dark' ? 'bg-slate-800 border-slate-600 text-white placeholder:text-slate-500' : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400'
-                    }`}
-                  ></textarea>
+                  <textarea rows="3" placeholder="Specify details, symptoms found, or special requests..." className={`w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none resize-none transition ${theme === 'dark' ? 'bg-slate-800 border-slate-600 text-white placeholder:text-slate-500' : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400'}`}></textarea>
                 </div>
-
-                {/* Appointment Summary Box */}
                 <div className={`p-4 rounded-lg border ${theme === 'dark' ? 'bg-slate-800/50 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
                   <h4 className={`text-sm font-bold mb-2 ${theme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`}>Appointment Summary</h4>
                   <div className="space-y-1 text-xs">
-                    <div className="flex">
-                      <span className={`w-20 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Machine:</span>
-                      <span className={`font-medium ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>{selectedMachine.name}</span>
-                    </div>
-                    <div className="flex">
-                      <span className={`w-20 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Type:</span>
-                      <span className={`font-medium ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>{scheduleType === 'urgent' ? 'Urgent Maintenance' : 'Routine Inspection'}</span>
-                    </div>
-                    <div className="flex">
-                      <span className={`w-20 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Date:</span>
-                      <span className={`font-medium ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>{scheduleForm.date || '-'}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <span className={`w-20 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Priority:</span>
-                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${
-                        scheduleForm.priority === 'high' ? 'bg-red-100 text-red-700' : 
-                        scheduleForm.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-700'
-                      }`}>
-                        {scheduleForm.priority || 'Medium'}
-                      </span>
-                    </div>
+                    <div className="flex"><span className={`w-20 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Machine:</span><span className={`font-medium ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>{selectedMachine.name}</span></div>
+                    <div className="flex"><span className={`w-20 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Type:</span><span className={`font-medium ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>{scheduleType === 'urgent' ? 'Urgent Maintenance' : 'Routine Inspection'}</span></div>
+                    <div className="flex"><span className={`w-20 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Date:</span><span className={`font-medium ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>{scheduleForm.date || '-'}</span></div>
+                    <div className="flex items-center"><span className={`w-20 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Priority:</span><span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${scheduleForm.priority === 'high' ? 'bg-red-100 text-red-700' : scheduleForm.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-700'}`}>{scheduleForm.priority || 'Medium'}</span></div>
                   </div>
                 </div>
-
               </div>
-
-              {/* Footer Buttons */}
               <div className={`px-6 py-4 border-t flex justify-end gap-3 ${theme === 'dark' ? 'border-slate-700 bg-slate-800/50' : 'border-slate-100 bg-slate-50'}`}>
-                <button 
-                  onClick={() => setShowScheduleModal(false)} 
-                  className={`px-6 py-2 rounded-lg text-sm font-medium border transition ${
-                    theme === 'dark' ? 'border-slate-600 text-slate-300 hover:bg-slate-700' : 'border-slate-300 text-slate-600 hover:bg-white hover:shadow-sm'
-                  }`}
-                >
-                  {currentLang.cancel}
-                </button>
-                
-                <button 
-                  onClick={handleScheduleSubmit} 
-                  disabled={!scheduleForm.technician || !scheduleForm.time}
-                  className={`px-6 py-2 rounded-lg text-sm font-medium shadow-md transition-all ${
-                    !scheduleForm.technician || !scheduleForm.time
-                      ? 'opacity-50 cursor-not-allowed'
-                      : 'hover:shadow-lg hover:-translate-y-0.5'
-                  } ${
-                    theme === 'dark' ? 'bg-slate-600 text-white' : ''
-                  }`}
-                  style={
-                    !scheduleForm.technician || !scheduleForm.time
-                      ? (theme === 'dark' ? {} : { backgroundColor: '#b4c4d6', color: '#475569' }) // Disabled Style
-                      : (theme === 'dark' ? {} : { backgroundColor: '#2563eb', color: '#fff' })     // Enabled Style (Blue)
-                  }
-                >
-                  {currentLang.confirmSchedule}
-                </button>
+                <button onClick={() => setShowScheduleModal(false)} className={`px-6 py-2 rounded-lg text-sm font-medium border transition ${theme === 'dark' ? 'border-slate-600 text-slate-300 hover:bg-slate-700' : 'border-slate-300 text-slate-600 hover:bg-white hover:shadow-sm'}`}>{currentLang.cancel}</button>
+                <button onClick={handleScheduleSubmit} disabled={!scheduleForm.technician || !scheduleForm.time} className={`px-6 py-2 rounded-lg text-sm font-medium shadow-md transition-all ${!scheduleForm.technician || !scheduleForm.time ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg hover:-translate-y-0.5'} ${theme === 'dark' ? 'bg-slate-600 text-white' : ''}`} style={!scheduleForm.technician || !scheduleForm.time ? (theme === 'dark' ? {} : { backgroundColor: '#b4c4d6', color: '#475569' }) : (theme === 'dark' ? {} : { backgroundColor: '#2563eb', color: '#fff' })}>{currentLang.confirmSchedule}</button>
               </div>
             </div>
           </div>
@@ -1650,184 +1081,92 @@
         {showMachineDetail && selectedMachine && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
             <div className={`${theme === 'dark' ? 'bg-[#0f172a]' : 'bg-slate-50'} rounded-xl w-full shadow-2xl overflow-hidden flex flex-col`} style={{ maxWidth: '1000px', maxHeight: '90vh' }}>
-              
-              {/* 1. Header */}
               <div className={`px-6 py-4 border-b flex items-center justify-between flex-shrink-0 ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
                 <div className="flex items-center gap-4">
-                  <div className={`p-3 rounded-lg ${theme === 'dark' ? 'bg-blue-900/30' : 'bg-blue-50'}`}>
-                    <Factory className={`w-6 h-6 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`} />
-                  </div>
+                  <div className={`p-3 rounded-lg ${theme === 'dark' ? 'bg-blue-900/30' : 'bg-blue-50'}`}><Factory className={`w-6 h-6 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`} /></div>
                   <div>
-                    <h2 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
-                      {selectedMachine.name}
-                    </h2>
-                    <p className={`text-sm ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
-                      {selectedMachine.type}
-                    </p>
+                    <h2 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{selectedMachine.name}</h2>
+                    <p className={`text-sm ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>{selectedMachine.type}</p>
                   </div>
                 </div>
-                <button 
-                  onClick={() => setShowMachineDetail(false)} 
-                  className={`p-2 rounded-full hover:bg-slate-100 transition ${theme === 'dark' ? 'text-slate-400 hover:bg-slate-700' : 'text-slate-400'}`}
-                >
-                  <X className="w-6 h-6" />
-                </button>
+                <button onClick={() => setShowMachineDetail(false)} className={`p-2 rounded-full hover:bg-slate-100 transition ${theme === 'dark' ? 'text-slate-400 hover:bg-slate-700' : 'text-slate-400'}`}><X className="w-6 h-6" /></button>
               </div>
-
-              {/* 2. Scrollable Content */}
               <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
-                
-                {/* Row 1: Key Metrics */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  {/* Health Score */}
                   <div className={`p-4 rounded-xl shadow-sm ${theme === 'dark' ? 'bg-slate-800' : 'bg-white'}`}>
                     <p className={`text-xs font-semibold mb-1 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Health Score</p>
-                    <p className={`text-3xl font-bold ${selectedMachine.health >= 80 ? 'text-green-500' : selectedMachine.health >= 60 ? 'text-yellow-500' : 'text-red-500'}`}>
-                      {selectedMachine.health}%
-                    </p>
+                    <p className={`text-3xl font-bold ${selectedMachine.health >= 80 ? 'text-green-500' : selectedMachine.health >= 60 ? 'text-yellow-500' : 'text-red-500'}`}>{selectedMachine.health}%</p>
                   </div>
-                  {/* RUL */}
                   <div className={`p-4 rounded-xl shadow-sm ${theme === 'dark' ? 'bg-slate-800' : 'bg-white'}`}>
                     <p className={`text-xs font-semibold mb-1 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>RUL</p>
                     <p className="text-3xl font-bold text-blue-600">{selectedMachine.rul}</p>
                     <p className="text-[10px] text-slate-400">days</p>
                   </div>
-                  {/* Operating Hours */}
                   <div className={`p-4 rounded-xl shadow-sm ${theme === 'dark' ? 'bg-slate-800' : 'bg-white'}`}>
                     <p className={`text-xs font-semibold mb-1 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Operating Hours</p>
                     <p className="text-3xl font-bold text-purple-600">{selectedMachine.operatingHours.toLocaleString()}</p>
                     <p className="text-[10px] text-slate-400">hours</p>
                   </div>
-                  {/* Status */}
                   <div className={`p-4 rounded-xl shadow-sm ${theme === 'dark' ? 'bg-slate-800' : 'bg-white'}`}>
                     <p className={`text-xs font-semibold mb-1 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Status</p>
-                    <span className={`inline-block px-3 py-1 rounded-full text-sm font-bold capitalize ${
-                      selectedMachine.status === 'good' ? 'bg-green-100 text-green-700' :
-                      selectedMachine.status === 'warning' ? 'bg-yellow-100 text-yellow-700' :
-                      'bg-red-100 text-red-700'
-                    }`}>
-                      {selectedMachine.status}
-                    </span>
+                    <span className={`inline-block px-3 py-1 rounded-full text-sm font-bold capitalize ${selectedMachine.status === 'good' ? 'bg-green-100 text-green-700' : selectedMachine.status === 'warning' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>{selectedMachine.status}</span>
                   </div>
                 </div>
-
-                {/* Row 2: Machine Information */}
                 <div className={`p-5 rounded-xl shadow-sm ${theme === 'dark' ? 'bg-slate-800' : 'bg-white'}`}>
                   <h3 className={`text-sm font-bold mb-4 ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>Machine Information</h3>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                    <div>
-                      <p className={`text-xs mb-1 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Machine Type</p>
-                      <p className={`font-medium ${theme === 'dark' ? 'text-slate-200' : 'text-slate-900'}`}>{selectedMachine.type}</p>
-                    </div>
-                    <div>
-                      <p className={`text-xs mb-1 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Install Date</p>
-                      <p className={`font-medium ${theme === 'dark' ? 'text-slate-200' : 'text-slate-900'}`}>{selectedMachine.installDate}</p>
-                    </div>
-                    <div>
-                      <p className={`text-xs mb-1 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Last Maintenance</p>
-                      <p className={`font-medium ${theme === 'dark' ? 'text-slate-200' : 'text-slate-900'}`}>{selectedMachine.lastMaintenance}</p>
-                    </div>
-                    <div>
-                      <p className={`text-xs mb-1 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Failure Probability (30d)</p>
-                      <p className={`font-medium ${theme === 'dark' ? 'text-slate-200' : 'text-slate-900'}`}>2%</p>
-                    </div>
+                    <div><p className={`text-xs mb-1 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Machine Type</p><p className={`font-medium ${theme === 'dark' ? 'text-slate-200' : 'text-slate-900'}`}>{selectedMachine.type}</p></div>
+                    <div><p className={`text-xs mb-1 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Install Date</p><p className={`font-medium ${theme === 'dark' ? 'text-slate-200' : 'text-slate-900'}`}>{selectedMachine.installDate}</p></div>
+                    <div><p className={`text-xs mb-1 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Last Maintenance</p><p className={`font-medium ${theme === 'dark' ? 'text-slate-200' : 'text-slate-900'}`}>{selectedMachine.lastMaintenance}</p></div>
+                    <div><p className={`text-xs mb-1 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Failure Probability (30d)</p><p className={`font-medium ${theme === 'dark' ? 'text-slate-200' : 'text-slate-900'}`}>2%</p></div>
                   </div>
                 </div>
-
-                {/* Row 3: Sensor Data */}
                 <div>
                   <h3 className={`text-sm font-bold mb-3 ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>Sensor Data</h3>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     {Object.entries(selectedMachine.sensors).map(([key, data]) => (
-                      <div key={key} className={`p-4 rounded-xl shadow-sm border-l-4 ${theme === 'dark' ? 'bg-slate-800' : 'bg-white'} ${
-                        data.status === 'normal' ? 'border-l-green-500' : 'border-l-red-500'
-                      }`}>
+                      <div key={key} className={`p-4 rounded-xl shadow-sm border-l-4 ${theme === 'dark' ? 'bg-slate-800' : 'bg-white'} ${data.status === 'normal' ? 'border-l-green-500' : 'border-l-red-500'}`}>
                         <p className={`text-xs font-semibold capitalize mb-1 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>{key}</p>
-                        <div className="flex items-baseline gap-1">
-                          <span className={`text-2xl font-bold ${theme === 'dark' ? 'text-slate-200' : 'text-slate-900'}`}>{data.value}</span>
-                          <span className="text-xs text-slate-400">{data.unit || ''}</span>
-                        </div>
-                        <span className={`mt-2 inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                          data.status === 'normal' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                        }`}>
-                          {data.status}
-                        </span>
+                        <div className="flex items-baseline gap-1"><span className={`text-2xl font-bold ${theme === 'dark' ? 'text-slate-200' : 'text-slate-900'}`}>{data.value}</span><span className="text-xs text-slate-400">{data.unit || ''}</span></div>
+                        <span className={`mt-2 inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase ${data.status === 'normal' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{data.status}</span>
                       </div>
                     ))}
                   </div>
                 </div>
-
-                {/* Row 4: Maintenance History */}
                 <div>
                   <h3 className={`text-sm font-bold mb-3 ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>Maintenance History</h3>
                   <div className={`rounded-xl shadow-sm overflow-hidden ${theme === 'dark' ? 'bg-slate-800' : 'bg-white'}`}>
                     {selectedMachine.maintenanceHistory.map((item, idx) => (
                       <div key={idx} className={`p-4 flex items-center justify-between border-b last:border-0 ${theme === 'dark' ? 'border-slate-700' : 'border-slate-100'}`}>
                         <div className="flex items-center gap-4">
-                          <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-50 text-blue-600'}`}>
-                            <Settings className="w-5 h-5" />
-                          </div>
-                          <div>
-                            <p className={`text-sm font-bold ${theme === 'dark' ? 'text-slate-200' : 'text-slate-900'}`}>{item.type}</p>
-                            <p className={`text-xs ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>{item.date}</p>
-                          </div>
+                          <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-50 text-blue-600'}`}><Settings className="w-5 h-5" /></div>
+                          <div><p className={`text-sm font-bold ${theme === 'dark' ? 'text-slate-200' : 'text-slate-900'}`}>{item.type}</p><p className={`text-xs ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>{item.date}</p></div>
                         </div>
-                        <span className={`text-sm font-medium ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
-                          ${item.cost.toLocaleString()}
-                        </span>
+                        <span className={`text-sm font-medium ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>${item.cost.toLocaleString()}</span>
                       </div>
                     ))}
                   </div>
                 </div>
-
-                {/* Row 5: Recommendations */}
                 <div className={`p-4 rounded-xl border ${theme === 'dark' ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200'}`}>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Activity className={`w-5 h-5 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`} />
-                    <h3 className={`text-sm font-bold ${theme === 'dark' ? 'text-blue-300' : 'text-blue-800'}`}>Recommendations</h3>
-                  </div>
+                  <div className="flex items-center gap-2 mb-2"><Activity className={`w-5 h-5 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`} /><h3 className={`text-sm font-bold ${theme === 'dark' ? 'text-blue-300' : 'text-blue-800'}`}>Recommendations</h3></div>
                   <div className="space-y-1 pl-7">
-                    <div className="flex items-center gap-2">
-                      <Check className={`w-4 h-4 ${theme === 'dark' ? 'text-green-400' : 'text-green-600'}`} />
-                      <p className={`text-sm ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>Continue routine maintenance</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Check className={`w-4 h-4 ${theme === 'dark' ? 'text-green-400' : 'text-green-600'}`} />
-                      <p className={`text-sm ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>Machine condition is optimal</p>
-                    </div>
+                    <div className="flex items-center gap-2"><Check className={`w-4 h-4 ${theme === 'dark' ? 'text-green-400' : 'text-green-600'}`} /><p className={`text-sm ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>Continue routine maintenance</p></div>
+                    <div className="flex items-center gap-2"><Check className={`w-4 h-4 ${theme === 'dark' ? 'text-green-400' : 'text-green-600'}`} /><p className={`text-sm ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>Machine condition is optimal</p></div>
                   </div>
                 </div>
               </div>
-
-              {/* 3. Footer Actions */}
               <div className={`px-6 py-4 border-t flex justify-between items-center ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
-                <button className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition ${theme === 'dark' ? 'bg-slate-700 text-slate-300 hover:bg-slate-600' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>
-                  <Download className="w-4 h-4" />
-                  {currentLang.exportReport}
-                </button>
-                
+                <button className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition ${theme === 'dark' ? 'bg-slate-700 text-slate-300 hover:bg-slate-600' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}><Download className="w-4 h-4" />{currentLang.exportReport}</button>
                 <div className="flex gap-3">
-                  <button 
-                    onClick={() => handleOpenSchedule(selectedMachine, 'inspection')}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm transition"
-                  >
-                    <Calendar className="w-4 h-4" />
-                    {currentLang.scheduleMaintenance}
-                  </button>
-                  <button 
-                    onClick={() => setShowMachineDetail(false)} 
-                    className={`px-4 py-2 rounded-lg text-sm font-medium border transition ${theme === 'dark' ? 'border-slate-600 text-slate-300 hover:bg-slate-700' : 'border-slate-300 text-slate-700 hover:bg-slate-50'}`}
-                  >
-                    {currentLang.close}
-                  </button>
+                  <button onClick={() => handleOpenSchedule(selectedMachine, 'inspection')} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm transition"><Calendar className="w-4 h-4" />{currentLang.scheduleMaintenance}</button>
+                  <button onClick={() => setShowMachineDetail(false)} className={`px-4 py-2 rounded-lg text-sm font-medium border transition ${theme === 'dark' ? 'border-slate-600 text-slate-300 hover:bg-slate-700' : 'border-slate-300 text-slate-700 hover:bg-slate-50'}`}>{currentLang.close}</button>
                 </div>
               </div>
-
             </div>
           </div>
         )}
 
-        {/* Success & Processing Messages */}
+        {/* Processing Overlay */}
         {isProcessing && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white p-6 rounded-lg flex flex-col items-center">
@@ -1837,6 +1176,7 @@
           </div>
         )}
 
+        {/* Success Toast */}
         {showSuccessMessage && (
           <div className="fixed top-20 right-6 bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center space-x-3 z-50">
             <CheckCircle className="w-6 h-6" />
@@ -1847,7 +1187,5 @@
       </div>
     );
   };
-
-
 
   export default App;
