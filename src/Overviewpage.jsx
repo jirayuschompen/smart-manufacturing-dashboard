@@ -1,9 +1,8 @@
 /* eslint-disable no-unused-vars */
-import React from 'react';
 import {
   Wind, Droplets, Gauge, Eye, Sun, CloudRain, Leaf, Zap,
   AlertTriangle, Factory, TrendingUp, Activity, DollarSign,
-  Bell, X, Clock, Trash2
+  Bell, X, Clock, Trash2,Banknote, 
 } from 'lucide-react';
 import {
   Area, AreaChart, Bar, BarChart, ComposedChart,
@@ -24,19 +23,19 @@ const SemiGauge = ({ value = 7, max = 30, theme }) => {
   const fg    = toXY(Math.min(absVal / max, 1));
   const large = absVal / max > 0.5 ? 1 : 0;
 
-  return (
-    <div className="flex items-center gap-2 mt-2">
-      <svg width="54" height="28" viewBox="0 0 54 28">
-        <path d="M 8 24 A 20 20 0 0 1 48 24" fill="none"
-          stroke={theme === 'dark' ? '#334155' : '#e2e8f0'} strokeWidth="5" strokeLinecap="round" />
-        <path d={`M 8 24 A 20 20 0 ${large} 1 ${fg.x} ${fg.y}`} fill="none"
-          stroke={color} strokeWidth="5" strokeLinecap="round" />
-      </svg>
-      <span className="text-xs font-bold" style={{ color }}>
-        {isPositive ? '+' : ''}{value}% this month
-      </span>
-    </div>
-  );
+  // return (
+  //   <div className="flex items-center gap-2 mt-2">
+  //     <svg width="54" height="28" viewBox="0 0 54 28">
+  //       <path d="M 8 24 A 20 20 0 0 1 48 24" fill="none"
+  //         stroke={theme === 'dark' ? '#334155' : '#e2e8f0'} strokeWidth="5" strokeLinecap="round" />
+  //       <path d={`M 8 24 A 20 20 0 ${large} 1 ${fg.x} ${fg.y}`} fill="none"
+  //         stroke={color} strokeWidth="5" strokeLinecap="round" />
+  //     </svg>
+  //     <span className="text-xs font-bold" style={{ color }}>
+  //       {isPositive ? '+' : ''}{value}% this month
+  //     </span>
+  //   </div>
+  // );
 };
 
 // ─── Static mock data ─────────────────────────────────────────────────────────
@@ -131,19 +130,20 @@ const Overview = ({
 
   const kpis = [
     { title: 'Yield (Today)',          value: '1,842 kWh', badge: '+3.2%',       up: true,  icon: Zap,           col: 'text-yellow-500', bg: dk ? 'bg-yellow-900/30' : 'bg-yellow-50', bdr: dk ? 'border-yellow-700/30' : 'border-yellow-200' },
-    { title: 'Total Revenue',          value: '฿ 12,450',  badge: '+5.8%',       up: true,  icon: DollarSign,    col: 'text-green-500',  bg: dk ? 'bg-green-900/30'  : 'bg-green-50',  bdr: dk ? 'border-green-700/30'  : 'border-green-200' },
+    { title: 'Total Revenue',          value: '฿ 12,450',  badge: '+5.8%',       up: true,  icon: Banknote,    col: 'text-green-500',  bg: dk ? 'bg-green-900/30'  : 'bg-green-50',  bdr: dk ? 'border-green-700/30'  : 'border-green-200' },
     { title: 'PR (Performance Ratio)', value: '20.2%',     badge: '+2.3%',       up: true,  icon: TrendingUp,    col: 'text-blue-500',   bg: dk ? 'bg-blue-900/30'   : 'bg-blue-50',   bdr: dk ? 'border-blue-700/30'   : 'border-blue-200',  gauge: true, gv: 2.3 },
     { title: 'Critical Alerts',        value: '3',          badge: '2 new today', up: false, icon: AlertTriangle, col: 'text-red-500',    bg: dk ? 'bg-red-900/30'    : 'bg-red-50',    bdr: dk ? 'border-red-700/30'    : 'border-red-200' },
   ];
 
   return (
-    <div className="w-full space-y-5">
+
+    <div className="w-full space-y-2">
 
       {/* ── ROW 1: Weather + Irradiation/Temp Chart ── */}
-      <div className={`${card} overflow-hidden`}>
-        <div className="flex flex-col lg:flex-row">
+      {/* <div className={`${card} overflow-hidden`}>
+        <div className="flex flex-col lg:flex-row"> */}
           {/* Left — weather summary */}
-          <div className={`lg:w-72 flex-shrink-0 p-5 border-b lg:border-b-0 lg:border-r
+          {/* <div className={`lg:w-72 flex-shrink-0 p-5 border-b lg:border-b-0 lg:border-r
             ${dk ? 'border-slate-700 bg-gradient-to-br from-slate-700/50 to-slate-800'
                  : 'border-slate-200 bg-gradient-to-br from-sky-50 to-blue-50'}`}>
             <div className={`flex items-center gap-2 mb-4 text-xs font-semibold ${sub}`}>
@@ -153,51 +153,48 @@ const Overview = ({
               <span className={`text-6xl font-bold tracking-tighter ${tx}`}>{weatherData.temp}°</span>
               <div className="pb-1">
                 <p className={`text-sm font-semibold ${tx}`}>{weatherData.condition}</p>
-                <p className={`text-xs ${sub}`}>Khlong Luang, TH</p>
+                <p className={`text-xs ${sub}`}>{weatherData.location ?? ''}</p>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-2">
+          </div> */}
+          {/* ใหม่: Right — env metrics (แถวบน) + all machines (แถวล่าง) */}
+          {/* <div className="flex-1 p-5 flex flex-col gap-4"> */}
+            {/* แถวบน: 6 env metrics */}
+            {/* <div className="grid grid-cols-3 lg:grid-cols-6 gap-2">
               {envMetrics.map((m) => (
-                <div key={m.label} className={`flex items-center gap-2 p-2 rounded-xl ${dk ? 'bg-slate-700/60' : 'bg-white/80'}`}>
-                  <m.icon className={`w-3.5 h-3.5 ${m.col} flex-shrink-0`} />
+                <div key={m.label} className={`flex items-center gap-2 p-3 rounded-xl ${dk ? 'bg-slate-700/60' : 'bg-slate-50'}`}>
+                  <m.icon className={`w-4 h-4 ${m.col} flex-shrink-0`} />
                   <div className="min-w-0">
                     <p className={`text-[9px] uppercase tracking-wide font-medium ${sub}`}>{m.label}</p>
-                    <p className={`text-[11px] font-bold ${tx} truncate`}>{m.value}</p>
+                    <p className={`text-sm font-bold ${tx} truncate`}>{m.value}</p>
                   </div>
                 </div>
               ))}
-            </div>
-          </div>
-
-          {/* Right — dual-line chart */}
-          <div className="flex-1 p-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
-              <div>
-                <h3 className={`text-sm font-bold ${tx}`}>Irradiation & Temperature — 24 h</h3>
-                <p className={`text-xs ${sub}`}>Real-time sensor data from site</p>
+            </div> */}
+            
+            {/* แถวล่าง: All Machines */}
+            {/* <div>
+              <div className={`flex items-center gap-2 mb-2 text-[10px] font-bold uppercase tracking-widest ${sub}`}>
+                <Factory className="w-3.5 h-3.5" /> All Machines — System Overview
               </div>
-              <div className={`flex items-center gap-4 text-xs ${sub}`}>
-                <span className="flex items-center gap-1.5"><span className="w-4 h-1 rounded bg-green-400 inline-block" />Irradiation (W/m²)</span>
-                <span className="flex items-center gap-1.5"><span className="w-4 h-1 rounded bg-red-400  inline-block" />Temperature (°C)</span>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+                {machineStats.map((s) => (
+                  <div key={s.label} className={`flex items-center gap-2 p-2.5 rounded-xl ${s.bg}`}>
+                    <s.icon className={`w-4 h-4 ${s.col} flex-shrink-0`} />
+                    <div className="min-w-0">
+                      <p className={`text-[9px] font-medium uppercase leading-tight ${sub} truncate`}>{s.label}</p>
+                      <p className={`text-sm font-bold ${tx} mt-0.5`}>{s.value}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-            <ResponsiveContainer width="100%" height={160}>
-              <ComposedChart data={envData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={grid} />
-                <XAxis dataKey="label" tick={{ fontSize: 9, fill: dk ? '#94a3b8' : '#64748b' }} interval={3} />
-                <YAxis yAxisId="irr" tick={{ fontSize: 9, fill: dk ? '#94a3b8' : '#64748b' }} domain={[0, 1100]} />
-                <YAxis yAxisId="tmp" orientation="right" tick={{ fontSize: 9, fill: dk ? '#94a3b8' : '#64748b' }} domain={[20, 44]} />
-                <Tooltip contentStyle={tip} />
-                <Area yAxisId="irr" type="monotone" dataKey="irradiation" name="Irradiation" stroke="#4ade80" fill="#4ade8020" strokeWidth={2} dot={false} />
-                <Line  yAxisId="tmp" type="monotone" dataKey="temperature"  name="Temperature"  stroke="#f87171" strokeWidth={2} dot={false} />
-              </ComposedChart>
-            </ResponsiveContainer>
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* ── ROW 2: KPI Cards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-2">
         {kpis.map((k, i) => (
           <div key={i} className={`${card} p-5 border ${k.bdr}`}>
             <div className="flex items-start justify-between mb-3">
@@ -217,11 +214,10 @@ const Overview = ({
         ))}
       </div>
 
-
       {/* ── ROW 4: Project Cash Flow + RA / Mhs ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
         {/* Cash Flow */}
-        <div className={`${card} p-5 lg:col-span-2`}>
+        <div className={`${card} p-4 lg:col-span-2`}>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
             <div>
               <h3 className={`text-sm font-bold ${tx}`}>Project Cash Flow</h3>
@@ -233,7 +229,7 @@ const Overview = ({
               <span className="flex items-center gap-1.5"><span className="w-4 h-0.5 bg-green-400 inline-block" />Net</span>
             </div>
           </div>
-          <ResponsiveContainer width="100%" height={200}>
+          <ResponsiveContainer width="100%" height={323}>
             <ComposedChart data={cashFlowData} margin={{ top: 4, right: 8, left: -12, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={grid} />
               <XAxis dataKey="month" tick={{ fontSize: 10, fill: dk ? '#94a3b8' : '#64748b' }} />
@@ -247,7 +243,7 @@ const Overview = ({
         </div>
 
         {/* RA + Mhs */}
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
           <div className={`${card} p-4 flex-1`}>
             <div className="flex items-center justify-between mb-3">
               <div>
@@ -256,7 +252,7 @@ const Overview = ({
               </div>
               <span className="text-xl font-bold text-yellow-500">5.4</span>
             </div>
-            <ResponsiveContainer width="100%" height={88}>
+            <ResponsiveContainer width="100%" height={120}>
               <AreaChart data={raData} margin={{ top: 2, right: 4, left: -28, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="2 2" stroke={grid} />
                 <XAxis dataKey="label" tick={{ fontSize: 9, fill: dk ? '#94a3b8' : '#64748b' }} />
@@ -274,7 +270,7 @@ const Overview = ({
               </div>
               <span className="text-xl font-bold text-orange-500">8 h</span>
             </div>
-            <ResponsiveContainer width="100%" height={88}>
+            <ResponsiveContainer width="100%" height={120}>
               <BarChart data={mhsData} margin={{ top: 2, right: 4, left: -28, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="2 2" stroke={grid} />
                 <XAxis dataKey="label" tick={{ fontSize: 9, fill: dk ? '#94a3b8' : '#64748b' }} />
@@ -288,7 +284,7 @@ const Overview = ({
       </div>
 
       {/* ── ROW 5: Production Efficiency + Revenue Forecast ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
         {/* Production Efficiency */}
         <div className={`${card} p-5`}>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
@@ -298,7 +294,7 @@ const Overview = ({
             </div>
             <PeriodToggle value={productionPeriod} onChange={setProductionPeriod} options={periods} active="bg-blue-600" isDark={dk} />
           </div>
-          <ResponsiveContainer width="100%" height={200}>
+          <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={productionDataSets[productionPeriod]} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
               <defs>
                 <linearGradient id="oeeGrad" x1="0" y1="0" x2="0" y2="1">
@@ -326,7 +322,7 @@ const Overview = ({
             </div>
             <PeriodToggle value={demandPeriod} onChange={setDemandPeriod} options={periods} active="bg-purple-600" isDark={dk} />
           </div>
-          <ResponsiveContainer width="100%" height={200}>
+          <ResponsiveContainer width="100%" height={300}>
             <ComposedChart data={demandDataSets[demandPeriod]} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
               <defs>
                 <linearGradient id="confGrad" x1="0" y1="0" x2="0" y2="1">
@@ -349,24 +345,6 @@ const Overview = ({
             <span className="flex items-center gap-1.5"><span className="w-4 h-0.5 bg-violet-400 rounded inline-block" />Forecast</span>
             <span className="flex items-center gap-1.5"><span className="w-4 h-3 bg-violet-400/20 rounded inline-block" />Confidence band</span>
           </div>
-        </div>
-      </div>
-
-      {/* ── ROW 3: All Machines Stats ── */}
-      <div className={`${card} p-4`}>
-        <div className={`flex items-center gap-2 mb-3 text-xs font-bold uppercase tracking-widest ${sub}`}>
-          <Factory className="w-4 h-4" /> All Machines — System Overview
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {machineStats.map((s) => (
-            <div key={s.label} className={`flex items-center gap-3 p-3 rounded-xl ${s.bg}`}>
-              <s.icon className={`w-5 h-5 ${s.col} flex-shrink-0`} />
-              <div className="min-w-0">
-                <p className={`text-[9px] font-medium uppercase leading-tight ${sub} truncate`}>{s.label}</p>
-                <p className={`text-sm font-bold ${tx} mt-0.5`}>{s.value}</p>
-              </div>
-            </div>
-          ))}
         </div>
       </div>
 

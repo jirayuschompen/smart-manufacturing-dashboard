@@ -638,8 +638,10 @@
       setTimeout(() => setShowSuccessMessage(false), 5000);
       setScheduleForm({ date: '', time: '', technician: '', priority: 'medium', notes: '' });
     };
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     return (
+
       <div className={`min-h-screen ${theme === 'dark' ? 'bg-gradient-to-br from-slate-900 to-slate-800' : 'bg-gradient-to-br from-slate-50 to-slate-100'}`}>      
         
         {/* Header */}
@@ -647,9 +649,19 @@
           {(showNotifications || showUserMenu) && (
             <div className="fixed inset-0 z-0 bg-transparent" onClick={() => { setShowNotifications(false); setShowUserMenu(false); }}></div>
           )}
-          <div className="max-w-7xl mx-auto px-4 lg:px-6 py-3">
+          <div className="max-w-10xl mx-auto px-14 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
+                
+                <button
+                  onClick={() => setSidebarOpen(true)}
+                  className={`p-2 rounded-lg transition-all ${theme === 'dark' ? 'hover:bg-slate-700 text-slate-300' : 'hover:bg-slate-100 text-slate-600'}`}
+                >
+                  <svg className="w-10 h-9" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </button>
+
                 <div className="p-1.5 rounded-xl shadow-md shrink-0">
                   <img 
                     src="https://github.com/jirayuschompen/smart-manufacturing-dashboard/blob/main/src/assets/logo.png?raw=true" 
@@ -746,9 +758,76 @@
           </div>
         </header>
 
+        {/* ── Sidebar Overlay ── */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+        
+        {/* ── Sidebar Panel ── */}
+        <div className={`fixed top-0 left-0 h-full w-64 z-50 shadow-2xl flex flex-col
+          transform transition-transform duration-300 ease-in-out
+          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+          ${theme === 'dark' ? 'bg-slate-900 border-r border-slate-700' : 'bg-white border-r border-slate-200'}`}
+        >
+          {/* Sidebar Header */}
+          <div className={`flex items-center justify-between px-5 py-4 border-b ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>
+            <span className={`text-sm font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>Navigation</span>
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className={`p-1.5 rounded-lg transition ${theme === 'dark' ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        
+          {/* Sidebar Nav Items */}
+          <nav className="flex-1 p-3 space-y-1">
+            {[
+              { id: 'overview',     label: currentLang.overview,             icon: Activity  },
+              { id: 'forecast',     label: currentLang.demandForecasting,    icon: TrendingUp },
+              { id: 'maintenance',  label: currentLang.predictiveMaintenance, icon: Settings  },
+              { id: 'planning',     label: currentLang.productionPlanning,   icon: Calendar  },
+            ].map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => { setActiveTab(tab.id); setSidebarOpen(false); }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all
+                    ${isActive
+                      ? (theme === 'dark' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40' : 'bg-blue-600 text-white shadow-md shadow-blue-200')
+                      : (theme === 'dark' ? 'text-slate-400 hover:bg-slate-800 hover:text-white' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900')
+                    }`}
+                >
+                  <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'scale-110' : ''} transition-transform`} />
+                  <span>{tab.label}</span>
+                  {isActive && <ChevronRight className="w-3.5 h-3.5 ml-auto opacity-70" />}
+                </button>
+              );
+            })}
+          </nav>
+          
+          {/* Active tab indicator at bottom */}
+          <div className={`px-5 py-4 border-t ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>
+            <p className={`text-[10px] uppercase tracking-widest font-semibold ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>Current View</p>
+            <p className={`text-sm font-bold mt-0.5 ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
+              {[
+                { id: 'overview', label: currentLang.overview },
+                { id: 'forecast', label: currentLang.demandForecasting },
+                { id: 'maintenance', label: currentLang.predictiveMaintenance },
+                { id: 'planning', label: currentLang.productionPlanning },
+              ].find(t => t.id === activeTab)?.label}
+            </p>
+          </div>
+        </div>            
+
         {/* Navigation Tabs */}
-        <div className={`sticky z-40 border-b transition-all duration-300 ${theme === 'dark' ? 'bg-slate-900/95 border-slate-700' : 'bg-white/95 border-slate-200'} backdrop-blur-sm top-[60px] lg:top-[76px]`}>
-          <div className="max-w-7xl mx-auto">
+        {/* <div className={`sticky z-40 border-b transition-all duration-300 ${theme === 'dark' ? 'bg-slate-900/95 border-slate-700' : 'bg-white/95 border-slate-200'} backdrop-blur-sm top-[60px] lg:top-[76px]`}>
+          <div className="max-w-8xl mx-auto px-16">
             <div className="flex overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
               <div className="flex min-w-full px-2 lg:px-6">
                 {[ { id: 'overview', label: 'Overview', icon: Activity }, { id: 'forecast', label: 'Demand Forecasting', icon: TrendingUp },{ id: 'maintenance', label: 'Predictive Maintenance', icon: Settings } ,{ id: 'planning', label: 'Production Planning', icon: Calendar } ].map((tab) => {
@@ -764,10 +843,10 @@
               </div>
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* Main Content */}
-        <main className="max-w-8xl mx-auto px-20 py-9">
+        <main className="max-w-8xl mx-auto px-20 py-2">
           
           {/* --- Overview Tab --- */}
           {activeTab === 'overview' && (
