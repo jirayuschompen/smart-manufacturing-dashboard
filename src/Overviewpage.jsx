@@ -62,6 +62,58 @@ const cashFlowData = [
   { month: 'Nov', revenue: 2100, cost: 590, net: 1510 },
   { month: 'Dec', revenue: 2450, cost: 720, net: 1730 },
 ];
+
+const revenueForcastDataSets = {
+  daily: Array.from({ length: 24 }, (_, h) => {
+    const base = h >= 6 && h <= 18 ? Math.round(500 * Math.sin(((h - 6) / 12) * Math.PI)) : 0;
+    return {
+      label: `${String(h).padStart(2, '0')}:00`,
+      actual:   h <= 14 ? Math.round(base + (Math.random() - 0.5) * 40) : 0,
+      forecast: Math.round(base * 1.05),
+      upper:    Math.round(base * 1.2),
+      lower:    Math.round(base * 0.85),
+    };
+  }),
+  weekly: [
+    { label: 'Mon', actual: 4250,  forecast: 4300,  upper: 4800,  lower: 3800 },
+    { label: 'Tue', actual: 4600,  forecast: 4500,  upper: 5000,  lower: 4000 },
+    { label: 'Wed', actual: 4100,  forecast: 4200,  upper: 4700,  lower: 3700 },
+    { label: 'Thu', actual: 4850,  forecast: 4800,  upper: 5300,  lower: 4300 },
+    { label: 'Fri', actual: 5100,  forecast: 5000,  upper: 5600,  lower: 4500 },
+    { label: 'Sat', actual: 3800,  forecast: 3900,  upper: 4400,  lower: 3400 },
+    { label: 'Sun', actual: 0,     forecast: 3600,  upper: 4100,  lower: 3100 },
+  ],
+  monthly: [
+    { label: 'Jan', actual: 125000, forecast: 122000, upper: 138000, lower: 108000 },
+    { label: 'Feb', actual: 132000, forecast: 130000, upper: 147000, lower: 115000 },
+    { label: 'Mar', actual: 148000, forecast: 145000, upper: 163000, lower: 129000 },
+    { label: 'Apr', actual: 162000, forecast: 158000, upper: 178000, lower: 140000 },
+    { label: 'May', actual: 171000, forecast: 175000, upper: 197000, lower: 155000 },
+    { label: 'Jun', actual: 155000, forecast: 160000, upper: 180000, lower: 142000 },
+    { label: 'Jul', actual: 0,      forecast: 168000, upper: 190000, lower: 148000 },
+    { label: 'Aug', actual: 0,      forecast: 180000, upper: 203000, lower: 159000 },
+    { label: 'Sep', actual: 0,      forecast: 172000, upper: 194000, lower: 152000 },
+    { label: 'Oct', actual: 0,      forecast: 185000, upper: 209000, lower: 163000 },
+    { label: 'Nov', actual: 0,      forecast: 178000, upper: 201000, lower: 157000 },
+    { label: 'Dec', actual: 0,      forecast: 192000, upper: 217000, lower: 169000 },
+  ],
+  yearly: [
+    { label: '2021', actual: 1420000, forecast: 1380000, upper: 1560000, lower: 1220000 },
+    { label: '2022', actual: 1680000, forecast: 1650000, upper: 1860000, lower: 1460000 },
+    { label: '2023', actual: 1920000, forecast: 1950000, upper: 2200000, lower: 1720000 },
+    { label: '2024', actual: 2150000, forecast: 2100000, upper: 2370000, lower: 1860000 },
+    { label: '2025', actual: 0,       forecast: 2450000, upper: 2770000, lower: 2170000 },
+  ],
+};
+
+// formatter สำหรับ Y axis และ tooltip
+const fmtRevenue = (v) => {
+  if (!v) return '฿0';
+  if (v >= 1000000) return `฿${(v / 1000000).toFixed(1)}M`;
+  if (v >= 1000)    return `฿${(v / 1000).toFixed(0)}k`;
+  return `฿${v}`;
+};
+
 const raData  = [
   { label: 'Mon', ra: 5.2 }, { label: 'Tue', ra: 4.8 }, { label: 'Wed', ra: 5.5 },
   { label: 'Thu', ra: 6.1 }, { label: 'Fri', ra: 5.8 }, { label: 'Sat', ra: 4.3 }, { label: 'Sun', ra: 3.9 },
@@ -314,7 +366,7 @@ const Overview = ({
         </div>
 
         {/* Revenue Forecast */}
-        <div className={`${card} p-5`}>
+        {/* <div className={`${card} p-5`}>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
             <div>
               <h3 className={`text-sm font-bold ${tx}`}>{currentLang.demandTrend || 'Revenue Forecast'}</h3>
@@ -342,6 +394,58 @@ const Overview = ({
           </ResponsiveContainer>
           <div className={`flex items-center gap-4 mt-2 text-xs ${sub}`}>
             <span className="flex items-center gap-1.5"><span className="w-4 h-0.5 bg-cyan-400  rounded inline-block" />Actual</span>
+            <span className="flex items-center gap-1.5"><span className="w-4 h-0.5 bg-violet-400 rounded inline-block" />Forecast</span>
+            <span className="flex items-center gap-1.5"><span className="w-4 h-3 bg-violet-400/20 rounded inline-block" />Confidence band</span>
+          </div>
+        </div> */}
+
+        <div className={`${card} p-5`}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+            <div>
+              <h3 className={`text-sm font-bold ${tx}`}>Revenue Forecast</h3>
+              <p className={`text-xs ${sub}`}>Actual vs. predicted revenue with confidence band</p>
+            </div>
+            <PeriodToggle value={demandPeriod} onChange={setDemandPeriod} options={periods} active="bg-purple-600" isDark={dk} />
+          </div>
+                
+          {/* Summary row */}
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            {[
+              { label: 'Actual (YTD)',   value: fmtRevenue(revenueForcastDataSets.monthly.filter(d => d.actual > 0).reduce((s, d) => s + d.actual, 0)), color: 'text-cyan-400' },
+              { label: 'Forecast (Full Year)', value: fmtRevenue(revenueForcastDataSets.monthly.reduce((s, d) => s + d.forecast, 0)), color: 'text-violet-400' },
+              { label: 'Accuracy',       value: '94.2%', color: 'text-green-400' },
+            ].map((s) => (
+              <div key={s.label} className={`p-3 rounded-xl ${dk ? 'bg-slate-700/50' : 'bg-slate-50'}`}>
+                <p className={`text-[10px] font-medium ${sub} mb-0.5`}>{s.label}</p>
+                <p className={`text-base font-bold ${s.color}`}>{s.value}</p>
+              </div>
+            ))}
+          </div>
+          
+          <ResponsiveContainer width="100%" height={230}>
+            <ComposedChart data={revenueForcastDataSets[demandPeriod]} margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
+              <defs>
+                <linearGradient id="confGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%"  stopColor="#a78bfa" stopOpacity={0.25} />
+                  <stop offset="95%" stopColor="#a78bfa" stopOpacity={0.02} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke={grid} />
+              <XAxis dataKey="label" tick={{ fontSize: 10, fill: dk ? '#94a3b8' : '#64748b' }} interval="preserveStartEnd" />
+              <YAxis tick={{ fontSize: 10, fill: dk ? '#94a3b8' : '#64748b' }} tickFormatter={fmtRevenue} width={52} />
+              <Tooltip
+                contentStyle={tip}
+                formatter={(value, name) => [fmtRevenue(value), name]}
+              />
+              <Area type="monotone" dataKey="upper"    stroke="transparent"            fill="url(#confGrad)" name="Upper bound" />
+              <Area type="monotone" dataKey="lower"    stroke="transparent"            fill={dk ? '#0f172a' : '#ffffff'} name="Lower bound" />
+              <Line type="monotone" dataKey="forecast" stroke="#a78bfa" strokeWidth={2}   dot={false} strokeDasharray="5 3" name="Forecast" />
+              <Line type="monotone" dataKey="actual"   stroke="#22d3ee" strokeWidth={2.5} dot={false} name="Actual"   connectNulls={false} />
+            </ComposedChart>
+          </ResponsiveContainer>
+          
+          <div className={`flex items-center gap-4 mt-2 text-xs ${sub}`}>
+            <span className="flex items-center gap-1.5"><span className="w-4 h-0.5 bg-cyan-400   rounded inline-block" />Actual</span>
             <span className="flex items-center gap-1.5"><span className="w-4 h-0.5 bg-violet-400 rounded inline-block" />Forecast</span>
             <span className="flex items-center gap-1.5"><span className="w-4 h-3 bg-violet-400/20 rounded inline-block" />Confidence band</span>
           </div>
