@@ -10,32 +10,114 @@ import {
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
 
-// ─── Mini Inline Gauge ────────────────────────────────────────────────────────
-const SemiGauge = ({ value = 7, max = 30, theme }) => {
-  const isPositive = value >= 0;
-  const color = isPositive ? '#22c55e' : '#ef4444';
-  const absVal = Math.abs(value);
+// ─── Semi-circular Gauge with colored zones + needle ─────────────────────────
+const SemiGauge = ({ value = 50, min = 0, max = 100, invert = false, theme }) => {
+  const dk = theme === 'dark';
+  let pct = Math.max(0, Math.min(1, (value - min) / (max - min)));
+  if (invert) pct = 1 - pct;
 
-  const toXY = (pct) => {
-    const rad = Math.PI * (1 - pct);
-    return { x: 28 + 20 * Math.cos(rad), y: 24 - 20 * Math.sin(rad) };
+  // SVG layout
+  const W = 108, H = 62;
+  const cx = W / 2, cy = H - 10, r = 44;
+
+  // Convert 0→1 to x/y on the arc (arc spans from left to right through top)
+  const pt = (p) => {
+    const rad = Math.PI * (1 - p);
+    return [cx + r * Math.cos(rad), cy - r * Math.sin(rad)];
   };
-  const fg    = toXY(Math.min(absVal / max, 1));
-  const large = absVal / max > 0.5 ? 1 : 0;
 
-  // return (
-  //   <div className="flex items-center gap-2 mt-2">
-  //     <svg width="54" height="28" viewBox="0 0 54 28">
-  //       <path d="M 8 24 A 20 20 0 0 1 48 24" fill="none"
-  //         stroke={theme === 'dark' ? '#334155' : '#e2e8f0'} strokeWidth="5" strokeLinecap="round" />
-  //       <path d={`M 8 24 A 20 20 0 ${large} 1 ${fg.x} ${fg.y}`} fill="none"
-  //         stroke={color} strokeWidth="5" strokeLinecap="round" />
-  //     </svg>
-  //     <span className="text-xs font-bold" style={{ color }}>
-  //       {isPositive ? '+' : ''}{value}% this month
-  //     </span>
-  //   </div>
-  // );
+  // Build SVG arc path from pct p0 to p1 (sweep=1 → goes through top)
+  const arcPath = (p0, p1) => {
+    const [x0, y0] = pt(p0);
+    const [x1, y1] = pt(p1);
+    const large = (p1 - p0) > 0.5 ? 1 : 0;
+    return `M ${x0.toFixed(1)} ${y0.toFixed(1)} A ${r} ${r} 0 ${large} 1 ${x1.toFixed(1)} ${y1.toFixed(1)}`;
+  };
+
+  // Needle tip
+  const [nx, ny] = pt(pct);
+
+  // Zone colors: LOW (red) → MEDIUM (amber) → HIGH (green)
+  const zones = [
+    { p0: 0,     p1: 0.333, color: '#ef4444' },
+    { p0: 0.333, p1: 0.666, color: '#f59e0b' },
+    { p0: 0.666, p1: 1,     color: '#22c55e' },
+  ];
+
+  // Tick marks (minor ticks every 10%)
+  const ticks = Array.from({ length: 11 }, (_, i) => i / 10);
+
+  return (
+    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="flex-shrink-0">
+      {/* ── Background track ── */}
+      <path d={arcPath(0, 1)}
+        fill="none"
+        stroke={dk ? '#1e293b' : '#e2e8f0'}
+        strokeWidth="11"
+        strokeLinecap="butt"
+      />
+
+      {/* ── Colored zone arcs ── */}
+      {zones.map((z) => (
+        <path
+          key={z.color}
+          d={arcPath(z.p0, z.p1)}
+          fill="none"
+          stroke={z.color}
+          strokeWidth="11"
+          strokeLinecap="butt"
+          opacity="0.9"
+        />
+      ))}
+
+      {/* ── Tick marks ── */}
+      {ticks.map((p) => {
+        const [tx0, ty0] = pt(p);
+        const inner = 0.85;
+        const [tx1, ty1] = [
+          cx + (r * inner) * Math.cos(Math.PI * (1 - p)),
+          cy - (r * inner) * Math.sin(Math.PI * (1 - p)),
+        ];
+        return (
+          <line
+            key={p}
+            x1={tx0.toFixed(1)} y1={ty0.toFixed(1)}
+            x2={tx1.toFixed(1)} y2={ty1.toFixed(1)}
+            stroke={dk ? '#0f172a' : '#ffffff'}
+            strokeWidth={p % 0.5 === 0 ? 2 : 1}
+            opacity="0.7"
+          />
+        );
+      })}
+
+      {/* ── Needle shadow ── */}
+      <line
+        x1={cx} y1={cy}
+        x2={(nx + 1).toFixed(1)} y2={(ny + 1).toFixed(1)}
+        stroke="rgba(0,0,0,0.3)"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+
+      {/* ── Needle ── */}
+      <line
+        x1={cx} y1={cy}
+        x2={nx.toFixed(1)} y2={ny.toFixed(1)}
+        stroke={dk ? '#f1f5f9' : '#1e293b'}
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      />
+
+      {/* ── Pivot circle ── */}
+      <circle cx={cx} cy={cy} r="5.5" fill={dk ? '#334155' : '#94a3b8'} />
+      <circle cx={cx} cy={cy} r="3"   fill={dk ? '#f1f5f9' : '#ffffff'} />
+
+      {/* ── Zone labels ── */}
+      <text x="5"        y={H - 1} fontSize="6" fill="#ef4444" fontWeight="700" fontFamily="sans-serif">LOW</text>
+      <text x={cx - 8}  y="10"    fontSize="6" fill="#f59e0b" fontWeight="700" fontFamily="sans-serif">MED</text>
+      <text x={W - 24}  y={H - 1} fontSize="6" fill="#22c55e" fontWeight="700" fontFamily="sans-serif">HIGH</text>
+    </svg>
+  );
 };
 
 // ─── Static mock data ─────────────────────────────────────────────────────────
@@ -106,7 +188,6 @@ const revenueForcastDataSets = {
   ],
 };
 
-// formatter สำหรับ Y axis และ tooltip
 const fmtRevenue = (v) => {
   if (!v) return '฿0';
   if (v >= 1000000) return `฿${(v / 1000000).toFixed(1)}M`;
@@ -118,10 +199,16 @@ const raData  = [
   { label: 'Mon', ra: 5.2 }, { label: 'Tue', ra: 4.8 }, { label: 'Wed', ra: 5.5 },
   { label: 'Thu', ra: 6.1 }, { label: 'Fri', ra: 5.8 }, { label: 'Sat', ra: 4.3 }, { label: 'Sun', ra: 3.9 },
 ];
-const mhsData = [
-  { label: 'Mon', mhs: 1 }, { label: 'Tue', mhs: 0 }, { label: 'Wed', mhs: 2 },
-  { label: 'Thu', mhs: 1 }, { label: 'Fri', mhs: 3 }, { label: 'Sat', mhs: 0 }, { label: 'Sun', mhs: 1 },
+const yieldData = [
+  { label: 'Mon', yield: 312 },
+  { label: 'Tue', yield: 289 },
+  { label: 'Wed', yield: 330 },
+  { label: 'Thu', yield: 367 },
+  { label: 'Fri', yield: 348 },
+  { label: 'Sat', yield: 258 },
+  { label: 'Sun', yield: 234 },
 ];
+const yieldMax = Math.max(...yieldData.map(d => d.yield));
 const envData = generateEnvData();
 
 // ─── Severity icon ─────────────────────────────────────────────────────────────
@@ -162,106 +249,89 @@ const Overview = ({
   const tip  = { background: dk ? '#1e293b' : '#fff', border: `1px solid ${dk ? '#334155' : '#e2e8f0'}`, borderRadius: 8, fontSize: 11 };
   const periods = ['daily', 'weekly', 'monthly', 'yearly'];
 
-  const envMetrics = [
-    { label: 'Wind',     value: `${weatherData.windSpeed} km/h`, icon: Wind,     col: 'text-blue-400' },
-    { label: 'Humidity', value: `${weatherData.humidity}%`,      icon: Droplets, col: 'text-cyan-400' },
-    { label: 'Pressure', value: `${weatherData.pressure} hPa`,   icon: Gauge,    col: 'text-purple-400' },
-    { label: 'Light',    value: '92 klx',                        icon: Sun,      col: 'text-yellow-400' },
-    { label: 'PM2.5',    value: '12 µg/m³',                      icon: Eye,      col: 'text-orange-400' },
-    { label: 'AQI',      value: '48 · Good',                     icon: Leaf,     col: 'text-green-400' },
-  ];
-
-  const machineStats = [
-    { label: 'Active Machines',       value: '5 / 6',  icon: Factory,   col: 'text-blue-500',    bg: dk ? 'bg-blue-900/30'    : 'bg-blue-50' },
-    { label: 'อัตราการผลิต',           value: '87.3%',  icon: Activity,  col: 'text-green-500',   bg: dk ? 'bg-green-900/30'   : 'bg-green-50' },
-    { label: 'Standard Coal Saved',   value: '4.82 t', icon: Zap,       col: 'text-yellow-500',  bg: dk ? 'bg-yellow-900/30'  : 'bg-yellow-50' },
-    { label: 'CO₂ Avoided',           value: '11.6 t', icon: CloudRain, col: 'text-teal-500',    bg: dk ? 'bg-teal-900/30'    : 'bg-teal-50' },
-    { label: 'Equivalent Trees',      value: '632',    icon: Leaf,      col: 'text-emerald-500', bg: dk ? 'bg-emerald-900/30' : 'bg-emerald-50' },
-    { label: 'Inverter Rated Power',  value: '250 kW', icon: Zap,       col: 'text-violet-500',  bg: dk ? 'bg-violet-900/30'  : 'bg-violet-50' },
-  ];
-
+  // ── KPI cards — now include gauge config ──────────────────────────────────
   const kpis = [
-    { title: 'Yield (Today)',          value: '1,842 kWh', badge: '+3.2%',       up: true,  icon: Zap,           col: 'text-yellow-500', bg: dk ? 'bg-yellow-900/30' : 'bg-yellow-50', bdr: dk ? 'border-yellow-700/30' : 'border-yellow-200' },
-    { title: 'Total Revenue',          value: '฿ 12,450',  badge: '+5.8%',       up: true,  icon: Banknote,    col: 'text-green-500',  bg: dk ? 'bg-green-900/30'  : 'bg-green-50',  bdr: dk ? 'border-green-700/30'  : 'border-green-200' },
-    { title: 'PR (Performance Ratio)', value: '20.2%',     badge: '+2.3%',       up: true,  icon: TrendingUp,    col: 'text-blue-500',   bg: dk ? 'bg-blue-900/30'   : 'bg-blue-50',   bdr: dk ? 'border-blue-700/30'   : 'border-blue-200',  gauge: true, gv: 2.3 },
-    { title: 'Critical Alerts',        value: '3',          badge: '2 new today', up: false, icon: AlertTriangle, col: 'text-red-500',    bg: dk ? 'bg-red-900/30'    : 'bg-red-50',    bdr: dk ? 'border-red-700/30'    : 'border-red-200' },
+    {
+      title: 'Yield (Today)',
+      value: '1,842 kWh', target: '2,000 kWh',
+      badge: '+3.2%', up: true,
+      icon: Zap, col: 'text-yellow-500',
+      bg: dk ? 'bg-yellow-900/30' : 'bg-yellow-50',
+      bdr: dk ? 'border-yellow-700/30' : 'border-yellow-200',
+      gv: 1842, gmin: 0, gmax: 2000, invert: false,
+    },
+    {
+      title: 'Total Revenue',
+      value: '฿ 12,450k', target: '฿ 58,000k',
+      badge: '+5.8%', up: true,
+      icon: Banknote, col: 'text-green-500',
+      bg: dk ? 'bg-green-900/30' : 'bg-green-50',
+      bdr: dk ? 'border-green-700/30' : 'border-green-200',
+      gv: 12450, gmin: 0, gmax: 58000, invert: false,
+    },
+    {
+      title: 'PR (Performance Ratio)',
+      value: '66%', target: '100%',
+      badge: '+2.3%', up: true,
+      icon: TrendingUp, col: 'text-blue-500',
+      bg: dk ? 'bg-blue-900/30' : 'bg-blue-50',
+      bdr: dk ? 'border-blue-700/30' : 'border-blue-200',
+      gv: 66, gmin: 0, gmax: 100, invert: false,
+    },
+    {
+      title: 'Critical Alerts',
+      value: '3', target: null,
+      badge: '2 new today', up: false,
+      icon: AlertTriangle, col: 'text-red-500',
+      bg: dk ? 'bg-red-900/30' : 'bg-red-50',
+      bdr: dk ? 'border-red-700/30' : 'border-red-200',
+      gv: null,
+    },
   ];
 
   return (
-
     <div className="w-full space-y-2">
 
-      {/* ── ROW 1: Weather + Irradiation/Temp Chart ── */}
-      {/* <div className={`${card} overflow-hidden`}>
-        <div className="flex flex-col lg:flex-row"> */}
-          {/* Left — weather summary */}
-          {/* <div className={`lg:w-72 flex-shrink-0 p-5 border-b lg:border-b-0 lg:border-r
-            ${dk ? 'border-slate-700 bg-gradient-to-br from-slate-700/50 to-slate-800'
-                 : 'border-slate-200 bg-gradient-to-br from-sky-50 to-blue-50'}`}>
-            <div className={`flex items-center gap-2 mb-4 text-xs font-semibold ${sub}`}>
-              <Sun className="w-4 h-4 text-yellow-400" /> Live Environmental
-            </div>
-            <div className="flex items-end gap-3 mb-5">
-              <span className={`text-6xl font-bold tracking-tighter ${tx}`}>{weatherData.temp}°</span>
-              <div className="pb-1">
-                <p className={`text-sm font-semibold ${tx}`}>{weatherData.condition}</p>
-                <p className={`text-xs ${sub}`}>{weatherData.location ?? ''}</p>
-              </div>
-            </div>
-          </div> */}
-          {/* ใหม่: Right — env metrics (แถวบน) + all machines (แถวล่าง) */}
-          {/* <div className="flex-1 p-5 flex flex-col gap-4"> */}
-            {/* แถวบน: 6 env metrics */}
-            {/* <div className="grid grid-cols-3 lg:grid-cols-6 gap-2">
-              {envMetrics.map((m) => (
-                <div key={m.label} className={`flex items-center gap-2 p-3 rounded-xl ${dk ? 'bg-slate-700/60' : 'bg-slate-50'}`}>
-                  <m.icon className={`w-4 h-4 ${m.col} flex-shrink-0`} />
-                  <div className="min-w-0">
-                    <p className={`text-[9px] uppercase tracking-wide font-medium ${sub}`}>{m.label}</p>
-                    <p className={`text-sm font-bold ${tx} truncate`}>{m.value}</p>
-                  </div>
-                </div>
-              ))}
-            </div> */}
-            
-            {/* แถวล่าง: All Machines */}
-            {/* <div>
-              <div className={`flex items-center gap-2 mb-2 text-[10px] font-bold uppercase tracking-widest ${sub}`}>
-                <Factory className="w-3.5 h-3.5" /> All Machines — System Overview
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-                {machineStats.map((s) => (
-                  <div key={s.label} className={`flex items-center gap-2 p-2.5 rounded-xl ${s.bg}`}>
-                    <s.icon className={`w-4 h-4 ${s.col} flex-shrink-0`} />
-                    <div className="min-w-0">
-                      <p className={`text-[9px] font-medium uppercase leading-tight ${sub} truncate`}>{s.label}</p>
-                      <p className={`text-sm font-bold ${tx} mt-0.5`}>{s.value}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div> */}
-
-      {/* ── ROW 2: KPI Cards ── */}
+      {/* ── ROW 1: KPI Cards with Gauges ── */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-2">
         {kpis.map((k, i) => (
-          <div key={i} className={`${card} p-5 border ${k.bdr}`}>
-            <div className="flex items-start justify-between mb-3">
-              <div className={`p-2.5 rounded-xl ${k.bg}`}>
-                <k.icon className={`w-5 h-5 ${k.col}`} />
+          <div key={i} className={`${card} p-4 border ${k.bdr} overflow-hidden`}>
+
+            {/* Top row: icon + badge */}
+            <div className="flex items-start justify-between mb-2">
+              <div className={`p-2 rounded-xl ${k.bg}`}>
+                <k.icon className={`w-4 h-4 ${k.col}`} />
               </div>
-              <span className={`text-[10px] font-bold px-2 py-1 rounded-full
-                ${k.up ? (dk ? 'bg-green-900/40 text-green-400' : 'bg-green-100 text-green-700')
-                       : (dk ? 'bg-red-900/40   text-red-400'   : 'bg-red-100   text-red-700')}`}>
+              <span className={`text-[10px] font-bold px-2 py-1 rounded-full leading-none
+                ${k.up
+                  ? (dk ? 'bg-green-900/40 text-green-400' : 'bg-green-100 text-green-700')
+                  : (dk ? 'bg-red-900/40   text-red-400'   : 'bg-red-100   text-red-700')}`}>
                 {k.badge}
               </span>
             </div>
-            <p className={`text-2xl font-bold ${tx} leading-none mb-1`}>{k.value}</p>
-            <p className={`text-xs font-medium ${sub}`}>{k.title}</p>
-            {k.gauge && <SemiGauge value={k.gv} max={30} theme={theme} />}
+
+            {/* Value row + gauge side by side */}
+            <div className="flex items-end justify-between gap-1">
+              <div className="min-w-0">
+                <p className={`text-2xl font-bold ${tx} leading-none`}>{k.value}</p>
+                {k.target && <p className={`text-[12px] font-semibold mt-0.5 ${k.col}`}>/ {k.target}</p>}
+                <p className={`text-xs font-medium mt-1 ${sub}`}>{k.title}</p>
+              </div>
+
+              {/* Gauge — only when gv is defined */}
+              {k.gv != null && (
+                <div className="flex-shrink-0 -mb-1">
+                  <SemiGauge
+                    value={k.gv}
+                    min={k.gmin}
+                    max={k.gmax}
+                    invert={k.invert}
+                    theme={theme}
+                  />
+                </div>
+              )}
+            </div>
+
           </div>
         ))}
       </div>
@@ -294,17 +364,17 @@ const Overview = ({
           </ResponsiveContainer>
         </div>
 
-        {/* RA + Mhs */}
+        {/* RA + Weekly Energy Yield*/}
         <div className="flex flex-col gap-2">
           <div className={`${card} p-4 flex-1`}>
             <div className="flex items-center justify-between mb-3">
               <div>
-                <h3 className={`text-sm font-bold ${tx}`}>RA – Daily Radiation</h3>
+                <h3 className={`text-sm font-bold ${tx}`}>RA – Weekly Irradiation</h3>
                 <p className={`text-[10px] ${sub}`}>kWh/m² per day</p>
               </div>
-              <span className="text-xl font-bold text-yellow-500">5.4</span>
+              <span className="text-xl font-bold text-yellow-500">5.4 kWh/m²</span>
             </div>
-            <ResponsiveContainer width="100%" height={120}>
+            <ResponsiveContainer width="100%" height={100}>
               <AreaChart data={raData} margin={{ top: 2, right: 4, left: -28, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="2 2" stroke={grid} />
                 <XAxis dataKey="label" tick={{ fontSize: 9, fill: dk ? '#94a3b8' : '#64748b' }} />
@@ -317,20 +387,29 @@ const Overview = ({
           <div className={`${card} p-4 flex-1`}>
             <div className="flex items-center justify-between mb-3">
               <div>
-                <h3 className={`text-sm font-bold ${tx}`}>Mhs – Maint. Hours</h3>
-                <p className={`text-[10px] ${sub}`}>Downtime hours per day</p>
+                <h3 className={`text-sm font-bold ${tx}`}>Weekly Energy Yield</h3>
+                <p className={`text-[10px] ${sub}`}>kWh produced per day</p>
               </div>
-              <span className="text-xl font-bold text-orange-500">8 h</span>
+              <span className="text-xl font-bold text-emerald-400">1,842 kWh</span>
             </div>
             <ResponsiveContainer width="100%" height={120}>
-              <BarChart data={mhsData} margin={{ top: 2, right: 4, left: -28, bottom: 0 }}>
+              <BarChart data={yieldData} margin={{ top: 2, right: 4, left: -28, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="2 2" stroke={grid} />
                 <XAxis dataKey="label" tick={{ fontSize: 9, fill: dk ? '#94a3b8' : '#64748b' }} />
-                <YAxis tick={{ fontSize: 9 }} domain={[0, 5]} />
-                <Tooltip contentStyle={tip} />
-                <Bar dataKey="mhs" name="Hours" fill="#f97316" radius={[4,4,0,0]} opacity={0.85} />
+                <YAxis tick={{ fontSize: 9 }} domain={[0, 420]} />
+                <Tooltip contentStyle={tip} formatter={(v) => [`${v} kWh`, 'Yield']} />
+                <Bar dataKey="yield" name="Yield" radius={[4,4,0,0]} fill="#22c55e"
+                  shape={(props) => {
+                    const { x, y, width, height, value } = props;
+                    return <rect x={x} y={y} width={width} height={height} rx={4} ry={4}
+                      fill={value === yieldMax ? '#22c55e' : (dk ? '#3b82f680' : '#93c5fd')} />;
+                  }}
+                />
               </BarChart>
             </ResponsiveContainer>
+            <div className={`flex items-center gap-2 mt-1.5 text-[9px] ${sub}`}>
+              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-green-500 inline-block"/>Highest day</span>
+            </div>
           </div>
         </div>
       </div>
@@ -366,39 +445,6 @@ const Overview = ({
         </div>
 
         {/* Revenue Forecast */}
-        {/* <div className={`${card} p-5`}>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
-            <div>
-              <h3 className={`text-sm font-bold ${tx}`}>{currentLang.demandTrend || 'Revenue Forecast'}</h3>
-              <p className={`text-xs ${sub}`}>Actual vs. predicted with confidence band</p>
-            </div>
-            <PeriodToggle value={demandPeriod} onChange={setDemandPeriod} options={periods} active="bg-purple-600" isDark={dk} />
-          </div>
-          <ResponsiveContainer width="100%" height={300}>
-            <ComposedChart data={demandDataSets[demandPeriod]} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
-              <defs>
-                <linearGradient id="confGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#a78bfa" stopOpacity={0.25} />
-                  <stop offset="95%" stopColor="#a78bfa" stopOpacity={0.02} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke={grid} />
-              <XAxis dataKey="label" tick={{ fontSize: 10, fill: dk ? '#94a3b8' : '#64748b' }} interval="preserveStartEnd" />
-              <YAxis tick={{ fontSize: 10, fill: dk ? '#94a3b8' : '#64748b' }} />
-              <Tooltip contentStyle={tip} />
-              <Area type="monotone" dataKey="upper" stroke="transparent" fill="url(#confGrad)" />
-              <Area type="monotone" dataKey="lower" stroke="transparent" fill={dk ? '#0f172a' : '#ffffff'} />
-              <Line type="monotone" dataKey="forecast" name="Forecast" stroke="#a78bfa" strokeWidth={2}   dot={false} strokeDasharray="5 3" />
-              <Line type="monotone" dataKey="actual"   name="Actual"   stroke="#22d3ee" strokeWidth={2.5} dot={false} />
-            </ComposedChart>
-          </ResponsiveContainer>
-          <div className={`flex items-center gap-4 mt-2 text-xs ${sub}`}>
-            <span className="flex items-center gap-1.5"><span className="w-4 h-0.5 bg-cyan-400  rounded inline-block" />Actual</span>
-            <span className="flex items-center gap-1.5"><span className="w-4 h-0.5 bg-violet-400 rounded inline-block" />Forecast</span>
-            <span className="flex items-center gap-1.5"><span className="w-4 h-3 bg-violet-400/20 rounded inline-block" />Confidence band</span>
-          </div>
-        </div> */}
-
         <div className={`${card} p-5`}>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
             <div>
@@ -433,10 +479,7 @@ const Overview = ({
               <CartesianGrid strokeDasharray="3 3" stroke={grid} />
               <XAxis dataKey="label" tick={{ fontSize: 10, fill: dk ? '#94a3b8' : '#64748b' }} interval="preserveStartEnd" />
               <YAxis tick={{ fontSize: 10, fill: dk ? '#94a3b8' : '#64748b' }} tickFormatter={fmtRevenue} width={52} />
-              <Tooltip
-                contentStyle={tip}
-                formatter={(value, name) => [fmtRevenue(value), name]}
-              />
+              <Tooltip contentStyle={tip} formatter={(value, name) => [fmtRevenue(value), name]} />
               <Area type="monotone" dataKey="upper"    stroke="transparent"            fill="url(#confGrad)" name="Upper bound" />
               <Area type="monotone" dataKey="lower"    stroke="transparent"            fill={dk ? '#0f172a' : '#ffffff'} name="Lower bound" />
               <Line type="monotone" dataKey="forecast" stroke="#a78bfa" strokeWidth={2}   dot={false} strokeDasharray="5 3" name="Forecast" />
