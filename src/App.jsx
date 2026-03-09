@@ -265,7 +265,7 @@
         alertDeleted: 'ลบการแจ้งเตือนแล้ว',
       },
       en: {
-        title: 'Smart Manufacturing AI',
+        title: 'Sunthesiz',
         subtitle: 'Predictive Analytics Platform',
         notifications: 'Notifications',
         markAllRead: 'Mark all as read',

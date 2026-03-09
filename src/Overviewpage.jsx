@@ -200,13 +200,13 @@ const raData  = [
   { label: 'Thu', ra: 6.1 }, { label: 'Fri', ra: 5.8 }, { label: 'Sat', ra: 4.3 }, { label: 'Sun', ra: 3.9 },
 ];
 const yieldData = [
-  { label: 'Mon', yield: 312 },
-  { label: 'Tue', yield: 289 },
-  { label: 'Wed', yield: 330 },
-  { label: 'Thu', yield: 367 },
-  { label: 'Fri', yield: 348 },
-  { label: 'Sat', yield: 258 },
-  { label: 'Sun', yield: 234 },
+  { label: 'Mon', yield: 312, target: 350 },
+  { label: 'Tue', yield: 289, target: 350 },
+  { label: 'Wed', yield: 330, target: 350 },
+  { label: 'Thu', yield: 367, target: 350 },
+  { label: 'Fri', yield: 348, target: 350 },
+  { label: 'Sat', yield: 258, target: 350 },
+  { label: 'Sun', yield: 234, target: 350 },
 ];
 const yieldMax = Math.max(...yieldData.map(d => d.yield));
 const envData = generateEnvData();
@@ -262,7 +262,7 @@ const Overview = ({
     },
     {
       title: 'Total Revenue',
-      value: '฿ 12,450k', target: '฿ 58,000k',
+      value: '฿ 12,450 k', target: '฿ 58,000,000',
       badge: '+5.8%', up: true,
       icon: Banknote, col: 'text-green-500',
       bg: dk ? 'bg-green-900/30' : 'bg-green-50',
@@ -271,12 +271,12 @@ const Overview = ({
     },
     {
       title: 'PR (Performance Ratio)',
-      value: '66%', target: '100%',
+      value: '66.2%', target: '100%',
       badge: '+2.3%', up: true,
       icon: TrendingUp, col: 'text-blue-500',
       bg: dk ? 'bg-blue-900/30' : 'bg-blue-50',
       bdr: dk ? 'border-blue-700/30' : 'border-blue-200',
-      gv: 66, gmin: 0, gmax: 100, invert: false,
+      gv: 66.2, gmin: 0, gmax: 100, invert: false,
     },
     {
       title: 'Critical Alerts',
@@ -314,7 +314,7 @@ const Overview = ({
             <div className="flex items-end justify-between gap-1">
               <div className="min-w-0">
                 <p className={`text-2xl font-bold ${tx} leading-none`}>{k.value}</p>
-                {k.target && <p className={`text-[12px] font-semibold mt-0.5 ${k.col}`}>/ {k.target}</p>}
+                {k.target && <p className={`text-[11px] font-semibold mt-0.5 ${k.col}`}>/ {k.target}</p>}
                 <p className={`text-xs font-medium mt-1 ${sub}`}>{k.title}</p>
               </div>
 
@@ -364,7 +364,7 @@ const Overview = ({
           </ResponsiveContainer>
         </div>
 
-        {/* RA + Weekly Energy Yield*/}
+        {/* RA + Mhs */}
         <div className="flex flex-col gap-2">
           <div className={`${card} p-4 flex-1`}>
             <div className="flex items-center justify-between mb-3">
@@ -372,7 +372,7 @@ const Overview = ({
                 <h3 className={`text-sm font-bold ${tx}`}>RA – Weekly Irradiation</h3>
                 <p className={`text-[10px] ${sub}`}>kWh/m² per day</p>
               </div>
-              <span className="text-xl font-bold text-yellow-500">5.4 kWh/m²</span>
+              <span className="text-xl font-bold text-yellow-500">5.4</span>
             </div>
             <ResponsiveContainer width="100%" height={100}>
               <AreaChart data={raData} margin={{ top: 2, right: 4, left: -28, bottom: 0 }}>
@@ -388,27 +388,29 @@ const Overview = ({
             <div className="flex items-center justify-between mb-3">
               <div>
                 <h3 className={`text-sm font-bold ${tx}`}>Weekly Energy Yield</h3>
-                <p className={`text-[10px] ${sub}`}>kWh produced per day</p>
+                <p className={`text-[10px] ${sub}`}>kWh produced per day vs. target</p>
               </div>
               <span className="text-xl font-bold text-emerald-400">1,842 kWh</span>
             </div>
             <ResponsiveContainer width="100%" height={120}>
-              <BarChart data={yieldData} margin={{ top: 2, right: 4, left: -28, bottom: 0 }}>
+              <ComposedChart data={yieldData} margin={{ top: 2, right: 4, left: -28, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="2 2" stroke={grid} />
                 <XAxis dataKey="label" tick={{ fontSize: 9, fill: dk ? '#94a3b8' : '#64748b' }} />
                 <YAxis tick={{ fontSize: 9 }} domain={[0, 420]} />
-                <Tooltip contentStyle={tip} formatter={(v) => [`${v} kWh`, 'Yield']} />
-                <Bar dataKey="yield" name="Yield" radius={[4,4,0,0]} fill="#22c55e"
+                <Tooltip contentStyle={tip} formatter={(v, n) => [`${v} kWh`, n]} />
+                <Bar dataKey="yield" name="Yield" radius={[4,4,0,0]}
                   shape={(props) => {
                     const { x, y, width, height, value } = props;
                     return <rect x={x} y={y} width={width} height={height} rx={4} ry={4}
                       fill={value === yieldMax ? '#22c55e' : (dk ? '#3b82f680' : '#93c5fd')} />;
                   }}
                 />
-              </BarChart>
+                <Line type="monotone" dataKey="target" name="Target" stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="4 2" dot={false} />
+              </ComposedChart>
             </ResponsiveContainer>
-            <div className={`flex items-center gap-2 mt-1.5 text-[9px] ${sub}`}>
+            <div className={`flex items-center gap-3 mt-1.5 text-[9px] ${sub}`}>
               <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-green-500 inline-block"/>Highest day</span>
+              <span className="flex items-center gap-1"><span className="w-4 h-0.5 bg-amber-400 inline-block"/>Target</span>
             </div>
           </div>
         </div>
@@ -496,7 +498,7 @@ const Overview = ({
       </div>
 
       {/* ── Recent Alerts ── */}
-      <div className={`${card} p-5`}>
+      {/* <div className={`${card} p-5`}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Bell className={`w-4 h-4 ${sub}`} />
@@ -526,7 +528,7 @@ const Overview = ({
             </div>
           ))}
         </div>
-      </div>
+      </div> */}
 
       {/* ── All Alerts Modal ── */}
       {showAllAlerts && (

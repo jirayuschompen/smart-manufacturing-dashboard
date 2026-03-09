@@ -1,5 +1,4 @@
 // src/Maintenance.jsx
-import React from 'react';
 import { 
   AlertTriangle, Activity, Factory, CheckCircle, XCircle 
 } from 'lucide-react';
