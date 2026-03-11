@@ -11,7 +11,7 @@ const CONFIG = {
   APP_KEY:    'EDA3396BA90A265E773C72AB969E3846',
   ACCESS_KEY: 'dw7an4xui4jccjw79macpwk55y1awa9c',
   BASE_URL:   import.meta.env.VITE_SUNGROW_BASE_URL ?? '/sungrow',
-  SYS_CODE:   '901',
+  SYS_CODE:   '200',
   LANG:       '_en_US',
 };
 

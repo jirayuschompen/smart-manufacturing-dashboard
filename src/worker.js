@@ -9,7 +9,7 @@
 // ============================================================
 
 const SUNGROW_BASE = 'https://web3.isolarcloud.com.hk';
-const ACCESS_KEY   = 'dw7an4xui4jccjw79macpwk55y1awa9c';
+const ACCESS_KEY = 'dw7an4xui4jccjw79macpwk55y1awa9c'; // ← ตรงนี้ด้วย
 const SYS_CODE     = '901';
 
 const CORS_HEADERS = {
