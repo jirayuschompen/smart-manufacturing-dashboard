@@ -266,7 +266,7 @@
       },
       en: {
         title: 'Sunthesiz',
-        subtitle: 'Predictive Analytics Platform',
+        subtitle: 'Synthesizing the Sun for Intelligent Power',
         notifications: 'Notifications',
         markAllRead: 'Mark all as read',
         viewAll: 'View All',
@@ -664,8 +664,8 @@
 
                 <div className="p-1.5 rounded-xl shadow-md shrink-0">
                   <img 
-                    src="https://github.com/jirayuschompen/smart-manufacturing-dashboard/blob/main/src/assets/logo.png?raw=true" 
-                    alt="Smart Manufacturing AI Logo"
+                    src="https://github.com/jirayuschompen/smart-manufacturing-dashboard/blob/main/src/assets/Sunthesiz.png?raw=true" 
+                    alt="Sunthesiz Logo"
                     className="w-9 h-9 lg:w-10 lg:h-10 object-contain"
                   />
                   </div>

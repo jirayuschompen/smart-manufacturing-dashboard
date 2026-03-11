@@ -108,9 +108,9 @@ const firebaseConfig = {
       loadingSDK: 'กำลังโหลด Firebase...',
     },
     en: {
-      welcome: 'Welcome to',
-      platform: 'Smart Manufacturing AI',
-      subtitle: 'Predictive Analytics Platform',
+      welcome: '',
+      platform: 'Sunthesiz',
+      subtitle: 'Synthesizing the Sun for Intelligent Power',
       emailLabel: 'Email Address',
       emailPlaceholder: 'Enter your email',
       passwordLabel: 'Password',
@@ -243,8 +243,8 @@ if (user) {
               <div className="flex items-center space-x-3">
                 <div className="rounded-xl shadow-md shrink-0">
                   <img 
-                    src="https://github.com/jirayuschompen/smart-manufacturing-dashboard/blob/main/src/assets/logo.png?raw=true" 
-                    alt="Smart Manufacturing AI Logo"
+                    src="https://github.com/jirayuschompen/smart-manufacturing-dashboard/blob/main/src/assets/Sunthesiz.png?raw=true" 
+                    alt="Sunthesiz Logo"
                     className="lg:w-20 lg:h-20 object-contain"
                   />
                   </div>

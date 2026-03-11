@@ -67,7 +67,11 @@ const mockPredict = (data, modelId) => {
     const noise       = noiseFactor * base * model.nf + (noiseFactor >= 0 ? noiseMin : -noiseMin);
     const val         = Math.round(Math.max(0, base + noise));
     const ci          = Math.round(Math.abs(val) * (0.05 + model.nf + rng(i + 10) * 0.02));
-    return { label: `F+${i+1}`, actual: null, forecast: val, upper: val + ci, lower: Math.max(0, val - ci) };
+    const monthLabels = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const lastMonth = data[data.length - 1]?.label;
+    const lastIdx   = monthLabels.indexOf(lastMonth);
+    const fLabel    = monthLabels[(lastIdx + 1 + i) % 12];
+    return { label: fLabel, actual: null, forecast: val, upper: val + ci, lower: Math.max(0, val - ci) };
   });
 
   const mape = (model.nf * 100 * (0.85 + rng(99) * 0.3)).toFixed(1);
