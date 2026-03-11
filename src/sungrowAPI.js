@@ -80,7 +80,7 @@ export const getPlantList = async (token) =>
   apiPost('/openapi/getPowerStationList', { token, curPage: 1, size: 20 });
 
 export const getDeviceList = async (token, psId) =>
-  apiPost('/openapi/getDeviceList', { token, ps_id: String(psId) });
+  apiPost('/openapi/getDeviceList', { token, ps_id: String(psId), curPage: 1, size: 50 });
 
 // ─── Real-Time Data ───────────────────────────────────────────
 
