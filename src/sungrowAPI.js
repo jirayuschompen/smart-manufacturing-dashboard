@@ -135,24 +135,21 @@ export const DEVICE_TYPE = {
 };
 
 export const LIVE_DATA_POINTS = {
-  ACTIVE_POWER:              13011,
+  // ── Inverter (type 1) points ──────────────────────
+  ACTIVE_POWER:         24,   // Total Active Power  W
+  GRID_FREQUENCY:       27,   // Grid Frequency      Hz
+  PHASE_A_VOLTAGE:      18,   // Phase A Voltage     V
+  PHASE_A_CURRENT:      21,   // Phase A Current     A
+  TOTAL_POWER_FACTOR:   26,   // Total Power Factor
+  TOTAL_PV_YIELD:        2,   // Total Yield         Wh
+  DAILY_PV_YIELD:        1,   // Yield Today         Wh
+
+  // ── ESS (type 14) points — ใช้ถ้า device เป็น ESS ─
   FEED_IN_POWER:             13121,
   LOAD_POWER:                13119,
-  GRID_FREQUENCY:            13007,
-  PHASE_A_VOLTAGE:           13157,
-  PHASE_A_CURRENT:           13008,
-  TOTAL_POWER_FACTOR:        13013,
+  TOTAL_FEED_IN_ENERGY:      13125,
+  TOTAL_PURCHASED_ENERGY:    13148,
   BATTERY_LEVEL:             13141,
   BATTERY_CHARGING_POWER:    13126,
   BATTERY_DISCHARGING_POWER: 13150,
-  BATTERY_VOLTAGE:           13138,
-  BATTERY_CURRENT:           13139,
-  BATTERY_HEALTH:            13142,
-  BATTERY_TEMPERATURE:       13143,
-  TOTAL_PV_YIELD:            13134,
-  TOTAL_FEED_IN_ENERGY:      13125,
-  TOTAL_PURCHASED_ENERGY:    13148,
-  TOTAL_BATTERY_CHARGING:    13034,
-  TOTAL_BATTERY_DISCHARGING: 13035,
-  DAILY_PV_YIELD:            13112,
 };
