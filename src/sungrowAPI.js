@@ -9,9 +9,7 @@
 
 const CONFIG = {
   APP_KEY:    'EDA3396BA90A265E773C72AB969E3846',
-  ACCESS_KEY: 'dw7an4xui4jccjw79macpwk55y1awa9c', // x-access-key / Secret_Key
-  // local dev  → Vite proxy at /sungrow
-  // production → Cloudflare Worker URL via .env.production
+  ACCESS_KEY: 'dw7an4xui4jccjw79macpwk55y1awa9c',
   BASE_URL:   import.meta.env.VITE_SUNGROW_BASE_URL ?? '/sungrow',
   SYS_CODE:   '901',
   LANG:       '_en_US',
