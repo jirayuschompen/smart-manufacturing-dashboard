@@ -203,7 +203,7 @@ const SungrowLivePanel = ({ theme }) => {
 
   const [token,      setToken]      = useState(getStoredToken);
   const [psKeyList,  setPsKeyList]  = useState([]);
-  const [deviceType, setDeviceType] = useState(DEVICE_TYPE.ENERGY_STORAGE_SYSTEM);
+  const [deviceType, setDeviceType] = useState(DEVICE_TYPE.INVERTER);
   const [liveData,   setLiveData]   = useState(DEMO_DATA);
   const [isDemo,     setIsDemo]     = useState(true);
   const [authStep,   setAuthStep]   = useState(AUTH_STEP.IDLE);
@@ -212,37 +212,48 @@ const SungrowLivePanel = ({ theme }) => {
   const [expanded,   setExpanded]   = useState(true);
   const [error,      setError]      = useState(null);
 
-  // ─── Fetch real-time data ───────────────────────────────────
-  const fetchData = useCallback(async (tok, psKeys, devType) => {
+  // ─── Fetch real-time data — tries multiple device types ─────
+  const fetchData = useCallback(async (tok, psKeys, preferredType) => {
     if (!tok || !psKeys.length) return;
-    try {
-      const result = await getDeviceRealTimeData(tok, psKeys, ALL_POINT_IDS, devType);
-      const parsed = parseDevicePoints(result, POINT_MAP);
 
-      if (parsed && Object.keys(parsed).length > 1) {
-        setLiveData(prev => ({ ...prev, ...parsed }));
-        setIsDemo(false);
-        setConnected(true);
-        setError(null);
-      } else if (devType !== DEVICE_TYPE.INVERTER) {
-        // Fallback: try inverter device type
-        const r2 = await getDeviceRealTimeData(tok, psKeys, ALL_POINT_IDS, DEVICE_TYPE.INVERTER);
-        const p2 = parseDevicePoints(r2, POINT_MAP);
-        if (p2 && Object.keys(p2).length > 1) {
-          setDeviceType(DEVICE_TYPE.INVERTER);
-          setLiveData(prev => ({ ...prev, ...p2 }));
-          setIsDemo(false);
-          setConnected(true);
-          setError(null);
-        } else {
-          setError('Device offline or no real-time data');
+    // Try these device types in order until one returns data
+    const typesToTry = [
+      preferredType,
+      DEVICE_TYPE.INVERTER,
+      DEVICE_TYPE.ENERGY_STORAGE_SYSTEM,
+      DEVICE_TYPE.METER,
+    ].filter((v, i, arr) => arr.indexOf(v) === i); // dedupe
+
+    try {
+      for (const devType of typesToTry) {
+        try {
+          console.log(`[Sungrow] Trying device_type=${devType}`);
+          const result = await getDeviceRealTimeData(tok, psKeys, ALL_POINT_IDS, devType);
+          const parsed = parseDevicePoints(result, POINT_MAP);
+
+          if (parsed && Object.keys(parsed).length > 1) {
+            console.log(`[Sungrow] ✓ Got data with device_type=${devType}`, parsed);
+            setDeviceType(devType);
+            setLiveData(prev => ({ ...prev, ...parsed }));
+            setIsDemo(false);
+            setConnected(true);
+            setError(null);
+            setLastUpdate(new Date());
+            setAuthStep(AUTH_STEP.DONE);
+            return; // ✅ สำเร็จ หยุดลองต่อ
+          }
+        } catch (innerErr) {
+          console.warn(`[Sungrow] device_type=${devType} failed:`, innerErr.message);
         }
       }
+
+      // ทุก type ลองแล้วไม่มีข้อมูล
+      setError('Device offline or no real-time data');
       setLastUpdate(new Date());
       setAuthStep(AUTH_STEP.DONE);
+
     } catch (err) {
       console.error('[Sungrow] fetchData error:', err.message);
-      // Token expired? Force re-login next time
       if (/token|auth|expire|E000|session/i.test(err.message)) {
         clearStoredToken();
         setToken(null);
@@ -265,27 +276,23 @@ const SungrowLivePanel = ({ theme }) => {
       if (!plantList.length) throw new Error('No plants found for this account');
 
       const psId = plantList[0].ps_id ?? plantList[0].id ?? plantList[0].plant_code;
+      console.log('[Sungrow] Plant ID:', psId);
 
       const devData = await getDeviceList(tok, psId);
       const devList = devData.pageList ?? devData.list ?? devData.device_list ?? [];
       if (!devList.length) throw new Error('No devices found for plant: ' + psId);
 
-      // Prefer ESS (type 14), fall back to all devices
-      const essList = devList.filter(d => {
-        const t = parseInt(d.ps_key?.split('_')[1]);
-        return t === 14 || d.device_type === 14;
-      });
-      const targets  = essList.length ? essList : devList;
-      const detType  = parseInt(targets[0]?.ps_key?.split('_')[1]) || DEVICE_TYPE.ENERGY_STORAGE_SYSTEM;
-      const psKeys   = targets.slice(0, 10).map(d => d.ps_key).filter(Boolean);
+      console.log('[Sungrow] Devices found:', devList.map(d => `${d.ps_key}(type:${d.device_type})`));
+
+      // ใช้ device_type จาก API จริงๆ
+      const psKeys  = devList.slice(0, 10).map(d => d.ps_key).filter(Boolean);
+      const detType = devList[0]?.device_type ?? DEVICE_TYPE.INVERTER;
 
       if (!psKeys.length) throw new Error('No ps_key values found in device list');
 
-      console.log('[Sungrow] Plant:', psId, '| Devices:', psKeys, '| Type:', detType);
-      setDeviceType(detType);
       setPsKeyList(psKeys);
-
       await fetchData(tok, psKeys, detType);
+
     } catch (err) {
       console.error('[Sungrow] discoverAndFetch error:', err.message);
       setError(err.message);
@@ -300,17 +307,14 @@ const SungrowLivePanel = ({ theme }) => {
     setConnected(false);
 
     try {
-      // Step 1: Login
       setAuthStep(AUTH_STEP.LOGGING_IN);
       const loginData = await login(CREDENTIALS.username, CREDENTIALS.password);
       const tok = loginData.token ?? loginData.access_token;
       if (!tok) throw new Error('No token returned from login');
 
-      // authorizeApp is a pass-through for direct login flow
       const authorizedTok = await authorizeApp(tok);
       setToken(authorizedTok);
 
-      // Step 2: Discover & fetch
       await discoverAndFetch(authorizedTok);
 
     } catch (err) {
@@ -322,11 +326,10 @@ const SungrowLivePanel = ({ theme }) => {
     }
   }, [discoverAndFetch]);
 
-  // ─── On mount: use stored token or do fresh login ───────────
+  // ─── On mount ───────────────────────────────────────────────
   useEffect(() => {
     const stored = getStoredToken();
     if (stored) {
-      // Attempt with stored token first; if it fails, connect() will re-login
       discoverAndFetch(stored).catch(() => connect());
     } else {
       connect();
@@ -481,11 +484,11 @@ const SungrowLivePanel = ({ theme }) => {
             isDark ? 'bg-slate-800/40 border-slate-700' : 'bg-slate-100 border-slate-200'
           }`}>
             {[
-              { label: 'Phase A',      val: `${phaseVoltage} V`                      },
-              { label: 'Frequency',    val: `${gridFrequency} Hz`                    },
-              { label: 'Power Factor', val: powerFactor                              },
-              { label: 'Devices',      val: psKeyList.length || '—'                 },
-              { label: 'Auth',         val: connected ? '✓ Direct Login' : isDemo ? 'Demo' : '—' },
+              { label: 'Phase A',      val: `${phaseVoltage} V`                                        },
+              { label: 'Frequency',    val: `${gridFrequency} Hz`                                      },
+              { label: 'Power Factor', val: powerFactor                                                },
+              { label: 'Devices',      val: psKeyList.length || '—'                                   },
+              { label: 'Auth',         val: connected ? `✓ type:${deviceType}` : isDemo ? 'Demo' : '—' },
             ].map(({ label, val }) => (
               <div key={label} className="flex items-center gap-2">
                 <span className={`text-[10px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{label}</span>

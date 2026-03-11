@@ -129,7 +129,7 @@ export const parseDevicePoints = (apiResult, pointMap) => {
 // ─── Constants ────────────────────────────────────────────────
 
 export const DEVICE_TYPE = {
-  INVERTER:              11,
+  INVERTER:              1,   // ← แก้จาก 11 เป็น 1
   ENERGY_STORAGE_SYSTEM: 14,
   METER:                 17,
 };
