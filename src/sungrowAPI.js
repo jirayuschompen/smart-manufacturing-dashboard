@@ -127,7 +127,7 @@ export const parseDevicePoints = (apiResult, pointMap) => {
 // ─── Constants ────────────────────────────────────────────────
 
 export const DEVICE_TYPE = {
-  INVERTER:              1,   // PV Inverter → ใช้ getPVInverterRealTimeData
+  INVERTER:              201,   // PV Inverter → ใช้ getPVInverterRealTimeData
   ENERGY_STORAGE_SYSTEM: 14,  // ESS        → ใช้ getDeviceRealTimeData
   METER:                 17,  // Meter      → ใช้ getDeviceRealTimeData
 };
