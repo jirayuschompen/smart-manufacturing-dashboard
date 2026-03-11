@@ -1,11 +1,6 @@
 // ============================================================
 // Sungrow iSolarCloud Open API Service — Direct Login Flow
 // ============================================================
-// Flow:
-//   1. login(user, pass)  → POST /openapi/login → token
-//   2. Use token in all API request bodies
-//   3. Token stored in sessionStorage for reuse
-// ============================================================
 
 const CONFIG = {
   APP_KEY:    'EDA3396BA90A265E773C72AB969E3846',
@@ -49,10 +44,6 @@ const apiPost = async (path, body) => {
 
 // ─── Auth ─────────────────────────────────────────────────────
 
-/**
- * Login with iSolarCloud credentials.
- * Stores token in sessionStorage automatically.
- */
 export const login = async (user_account, user_password) => {
   const data = await apiPost('/openapi/login', { user_account, user_password });
   const tok  = data.token ?? data.access_token;
@@ -61,14 +52,8 @@ export const login = async (user_account, user_password) => {
   return data;
 };
 
-/**
- * For direct login flow, authorize is a no-op — login token IS the API token.
- */
 export const authorizeApp = async (loginToken) => loginToken;
 
-/**
- * Convenience: login + return token string.
- */
 export const loginAndAuthorize = async (user_account, user_password) => {
   const data = await login(user_account, user_password);
   return data.token ?? data.access_token;
@@ -84,6 +69,19 @@ export const getDeviceList = async (token, psId) =>
 
 // ─── Real-Time Data ───────────────────────────────────────────
 
+/**
+ * PV Inverter (device_type=1) — dedicated endpoint, no device_type param
+ * Returns all inverter points automatically
+ */
+export const getPVInverterRealTimeData = async (token, psKeyList) =>
+  apiPost('/openapi/getPVInverterRealTimeData', {
+    token,
+    ps_key_list: psKeyList,
+  });
+
+/**
+ * ESS / Meter / other types — generic endpoint needs device_type + point_id_list
+ */
 export const getDeviceRealTimeData = async (token, psKeyList, pointIdList, deviceType) =>
   apiPost('/openapi/getDeviceRealTimeData', {
     token,
@@ -101,7 +99,7 @@ export const parseDevicePoints = (apiResult, pointMap) => {
   if (!list.length) return null;
 
   const powerKeys  = new Set(['activePower','feedInPower','loadPower','batteryCharge','batteryDischarge']);
-  const energyKeys = new Set(['totalPvYield','totalPurchased','totalFeedIn']);
+  const energyKeys = new Set(['totalPvYield','dailyPvYield','totalPurchased','totalFeedIn']);
   const totals = {};
 
   for (const item of list) {
@@ -129,27 +127,45 @@ export const parseDevicePoints = (apiResult, pointMap) => {
 // ─── Constants ────────────────────────────────────────────────
 
 export const DEVICE_TYPE = {
-  INVERTER:              1,   // ← แก้จาก 11 เป็น 1
-  ENERGY_STORAGE_SYSTEM: 14,
-  METER:                 17,
+  INVERTER:              1,   // PV Inverter → ใช้ getPVInverterRealTimeData
+  ENERGY_STORAGE_SYSTEM: 14,  // ESS        → ใช้ getDeviceRealTimeData
+  METER:                 17,  // Meter      → ใช้ getDeviceRealTimeData
 };
 
-export const LIVE_DATA_POINTS = {
-  // ── Inverter (type 1) points ──────────────────────
-  ACTIVE_POWER:         24,   // Total Active Power  W
-  GRID_FREQUENCY:       27,   // Grid Frequency      Hz
-  PHASE_A_VOLTAGE:      18,   // Phase A Voltage     V
-  PHASE_A_CURRENT:      21,   // Phase A Current     A
-  TOTAL_POWER_FACTOR:   26,   // Total Power Factor
-  TOTAL_PV_YIELD:        2,   // Total Yield         Wh
-  DAILY_PV_YIELD:        1,   // Yield Today         Wh
+// ── Inverter (device_type=1) point IDs ────────────────────────
+export const INVERTER_POINTS = {
+  ACTIVE_POWER:    24,  // Total Active Power  W
+  TOTAL_PV_YIELD:   2,  // Total Yield         Wh
+  DAILY_PV_YIELD:   1,  // Yield Today         Wh
+  GRID_FREQUENCY:  27,  // Grid Frequency      Hz
+  PHASE_A_VOLTAGE: 18,  // Phase A Voltage     V
+  PHASE_A_CURRENT: 21,  // Phase A Current     A
+  TOTAL_PF:        26,  // Total Power Factor
+};
 
-  // ── ESS (type 14) points — ใช้ถ้า device เป็น ESS ─
+// ── ESS (device_type=14) point IDs ────────────────────────────
+export const ESS_POINTS = {
+  ACTIVE_POWER:              13011,
   FEED_IN_POWER:             13121,
   LOAD_POWER:                13119,
-  TOTAL_FEED_IN_ENERGY:      13125,
-  TOTAL_PURCHASED_ENERGY:    13148,
+  GRID_FREQUENCY:            13007,
+  PHASE_A_VOLTAGE:           13157,
+  PHASE_A_CURRENT:           13008,
+  TOTAL_POWER_FACTOR:        13013,
   BATTERY_LEVEL:             13141,
   BATTERY_CHARGING_POWER:    13126,
   BATTERY_DISCHARGING_POWER: 13150,
+  BATTERY_VOLTAGE:           13138,
+  BATTERY_CURRENT:           13139,
+  BATTERY_HEALTH:            13142,
+  BATTERY_TEMPERATURE:       13143,
+  TOTAL_PV_YIELD:            13134,
+  TOTAL_FEED_IN_ENERGY:      13125,
+  TOTAL_PURCHASED_ENERGY:    13148,
+  TOTAL_BATTERY_CHARGING:    13034,
+  TOTAL_BATTERY_DISCHARGING: 13035,
+  DAILY_PV_YIELD:            13112,
 };
+
+// backward compat
+export const LIVE_DATA_POINTS = ESS_POINTS;

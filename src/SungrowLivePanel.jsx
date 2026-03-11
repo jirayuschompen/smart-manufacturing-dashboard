@@ -1,4 +1,4 @@
-// SungrowLivePanel.jsx — Auto Login Flow (no OAuth popup)
+// SungrowLivePanel.jsx — Auto Login Flow
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Zap, Sun, Activity, RefreshCw, TrendingUp,
@@ -7,22 +7,22 @@ import {
 import {
   login, authorizeApp, getStoredToken, clearStoredToken,
   getPlantList, getDeviceList,
-  getDeviceRealTimeData, parseDevicePoints,
-  LIVE_DATA_POINTS, DEVICE_TYPE,
+  getPVInverterRealTimeData, getDeviceRealTimeData,
+  parseDevicePoints,
+  INVERTER_POINTS, ESS_POINTS, DEVICE_TYPE,
 } from './sungrowAPI';
 
-// ── Credentials (hardcoded — keep server-side in production) ──
 const CREDENTIALS = {
   username: 'surachn@gmail.com',
   password: 'Porsch83#',
 };
 
-// ── Demo data shown while loading ─────────────────────────────
 const DEMO_DATA = {
   activePower:      8.47,
   feedInPower:      3.13,
   loadPower:        5.34,
   totalPvYield:     18420,
+  dailyPvYield:     42,
   totalPurchased:   2310,
   totalFeedIn:      6840,
   batteryLevel:     73,
@@ -35,29 +35,39 @@ const DEMO_DATA = {
   timestamp:        new Date(),
 };
 
-const POINT_MAP = {
-  [LIVE_DATA_POINTS.ACTIVE_POWER]:              'activePower',
-  [LIVE_DATA_POINTS.FEED_IN_POWER]:             'feedInPower',
-  [LIVE_DATA_POINTS.LOAD_POWER]:                'loadPower',
-  [LIVE_DATA_POINTS.TOTAL_PV_YIELD]:            'totalPvYield',
-  [LIVE_DATA_POINTS.TOTAL_PURCHASED_ENERGY]:    'totalPurchased',
-  [LIVE_DATA_POINTS.TOTAL_FEED_IN_ENERGY]:      'totalFeedIn',
-  [LIVE_DATA_POINTS.BATTERY_LEVEL]:             'batteryLevel',
-  [LIVE_DATA_POINTS.BATTERY_CHARGING_POWER]:    'batteryCharge',
-  [LIVE_DATA_POINTS.BATTERY_DISCHARGING_POWER]: 'batteryDischarge',
-  [LIVE_DATA_POINTS.GRID_FREQUENCY]:            'gridFrequency',
-  [LIVE_DATA_POINTS.TOTAL_POWER_FACTOR]:        'powerFactor',
-  [LIVE_DATA_POINTS.PHASE_A_VOLTAGE]:           'phaseVoltage',
-  [LIVE_DATA_POINTS.PHASE_A_CURRENT]:           'phaseCurrent',
+// ── Point maps ──────────────────────────────────────────────────
+const INVERTER_POINT_MAP = {
+  [INVERTER_POINTS.ACTIVE_POWER]:    'activePower',
+  [INVERTER_POINTS.TOTAL_PV_YIELD]:  'totalPvYield',
+  [INVERTER_POINTS.DAILY_PV_YIELD]:  'dailyPvYield',
+  [INVERTER_POINTS.GRID_FREQUENCY]:  'gridFrequency',
+  [INVERTER_POINTS.PHASE_A_VOLTAGE]: 'phaseVoltage',
+  [INVERTER_POINTS.PHASE_A_CURRENT]: 'phaseCurrent',
+  [INVERTER_POINTS.TOTAL_PF]:        'powerFactor',
 };
-const ALL_POINT_IDS = Object.keys(POINT_MAP).map(Number);
+
+const ESS_POINT_MAP = {
+  [ESS_POINTS.ACTIVE_POWER]:              'activePower',
+  [ESS_POINTS.FEED_IN_POWER]:             'feedInPower',
+  [ESS_POINTS.LOAD_POWER]:                'loadPower',
+  [ESS_POINTS.TOTAL_PV_YIELD]:            'totalPvYield',
+  [ESS_POINTS.DAILY_PV_YIELD]:            'dailyPvYield',
+  [ESS_POINTS.TOTAL_PURCHASED_ENERGY]:    'totalPurchased',
+  [ESS_POINTS.TOTAL_FEED_IN_ENERGY]:      'totalFeedIn',
+  [ESS_POINTS.BATTERY_LEVEL]:             'batteryLevel',
+  [ESS_POINTS.BATTERY_CHARGING_POWER]:    'batteryCharge',
+  [ESS_POINTS.BATTERY_DISCHARGING_POWER]: 'batteryDischarge',
+  [ESS_POINTS.GRID_FREQUENCY]:            'gridFrequency',
+  [ESS_POINTS.TOTAL_POWER_FACTOR]:        'powerFactor',
+  [ESS_POINTS.PHASE_A_VOLTAGE]:           'phaseVoltage',
+  [ESS_POINTS.PHASE_A_CURRENT]:           'phaseCurrent',
+};
+
+const ESS_POINT_IDS = Object.keys(ESS_POINT_MAP).map(Number);
 
 const AUTH_STEP = {
-  IDLE:       'idle',
-  LOGGING_IN: 'logging_in',
-  FETCHING:   'fetching',
-  DONE:       'done',
-  ERROR:      'error',
+  IDLE: 'idle', LOGGING_IN: 'logging_in',
+  FETCHING: 'fetching', DONE: 'done', ERROR: 'error',
 };
 
 // ─── Sub-components ───────────────────────────────────────────
@@ -158,31 +168,25 @@ const PowerFlow = ({ activePower, feedIn, load, theme }) => {
 const AuthProgress = ({ step, theme }) => {
   const isDark = theme === 'dark';
   const steps = [
-    { key: AUTH_STEP.LOGGING_IN, label: 'Logging in…'    },
+    { key: AUTH_STEP.LOGGING_IN, label: 'Logging in…' },
     { key: AUTH_STEP.FETCHING,   label: 'Fetching data…' },
   ];
   const currentIdx = steps.findIndex(s => s.key === step);
   if (currentIdx === -1) return null;
-
   return (
     <div className={`rounded-xl p-4 border ${isDark ? 'bg-slate-800/60 border-slate-700' : 'bg-white border-slate-200 shadow-sm'}`}>
       <div className="flex items-center gap-3">
         {steps.map((s, i) => {
-          const done   = i < currentIdx;
-          const active = i === currentIdx;
+          const done = i < currentIdx, active = i === currentIdx;
           return (
             <React.Fragment key={s.key}>
               <div className={`flex items-center gap-2 ${active ? 'opacity-100' : done ? 'opacity-60' : 'opacity-30'}`}>
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                  done   ? 'bg-green-500 text-white' :
+                  done ? 'bg-green-500 text-white' :
                   active ? 'bg-yellow-400 text-slate-900 animate-pulse' :
-                           isDark ? 'bg-slate-700 text-slate-500' : 'bg-slate-200 text-slate-400'
-                }`}>
-                  {done ? '✓' : i + 1}
-                </div>
-                <span className={`text-[11px] font-medium whitespace-nowrap ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-                  {s.label}
-                </span>
+                  isDark ? 'bg-slate-700 text-slate-500' : 'bg-slate-200 text-slate-400'
+                }`}>{done ? '✓' : i + 1}</div>
+                <span className={`text-[11px] font-medium whitespace-nowrap ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{s.label}</span>
               </div>
               {i < steps.length - 1 && (
                 <div className={`flex-1 h-px ${done ? 'bg-green-500' : isDark ? 'bg-slate-700' : 'bg-slate-200'}`} />
@@ -212,52 +216,57 @@ const SungrowLivePanel = ({ theme }) => {
   const [expanded,   setExpanded]   = useState(true);
   const [error,      setError]      = useState(null);
 
-  // ─── Fetch real-time data — tries multiple device types ─────
-  const fetchData = useCallback(async (tok, psKeys, preferredType) => {
+  // ─── Fetch — ลอง Inverter endpoint ก่อน แล้ว fallback ESS ──
+  const fetchData = useCallback(async (tok, psKeys, detType) => {
     if (!tok || !psKeys.length) return;
-
-    // Try these device types in order until one returns data
-    const typesToTry = [
-      preferredType,
-      DEVICE_TYPE.INVERTER,
-      DEVICE_TYPE.ENERGY_STORAGE_SYSTEM,
-      DEVICE_TYPE.METER,
-    ].filter((v, i, arr) => arr.indexOf(v) === i); // dedupe
-
     try {
-      for (const devType of typesToTry) {
-        try {
-          console.log(`[Sungrow] Trying device_type=${devType}`);
-          const result = await getDeviceRealTimeData(tok, psKeys, ALL_POINT_IDS, devType);
-          const parsed = parseDevicePoints(result, POINT_MAP);
+      let parsed = null;
 
+      if (detType === DEVICE_TYPE.INVERTER) {
+        // ── Inverter: ใช้ endpoint เฉพาะ ──────────────────────
+        console.log('[Sungrow] Trying PVInverter endpoint...');
+        try {
+          const result = await getPVInverterRealTimeData(tok, psKeys);
+          parsed = parseDevicePoints(result, INVERTER_POINT_MAP);
           if (parsed && Object.keys(parsed).length > 1) {
-            console.log(`[Sungrow] ✓ Got data with device_type=${devType}`, parsed);
-            setDeviceType(devType);
-            setLiveData(prev => ({ ...prev, ...parsed }));
-            setIsDemo(false);
-            setConnected(true);
-            setError(null);
-            setLastUpdate(new Date());
-            setAuthStep(AUTH_STEP.DONE);
-            return; // ✅ สำเร็จ หยุดลองต่อ
+            console.log('[Sungrow] ✓ Inverter data:', parsed);
           }
-        } catch (innerErr) {
-          console.warn(`[Sungrow] device_type=${devType} failed:`, innerErr.message);
+        } catch (e) {
+          console.warn('[Sungrow] PVInverter endpoint failed:', e.message);
         }
       }
 
-      // ทุก type ลองแล้วไม่มีข้อมูล
-      setError('Device offline or no real-time data');
+      if (!parsed || Object.keys(parsed).length <= 1) {
+        // ── Fallback: ESS endpoint ─────────────────────────────
+        console.log('[Sungrow] Trying ESS endpoint (device_type=14)...');
+        try {
+          const result = await getDeviceRealTimeData(tok, psKeys, ESS_POINT_IDS, DEVICE_TYPE.ENERGY_STORAGE_SYSTEM);
+          parsed = parseDevicePoints(result, ESS_POINT_MAP);
+          if (parsed && Object.keys(parsed).length > 1) {
+            setDeviceType(DEVICE_TYPE.ENERGY_STORAGE_SYSTEM);
+            console.log('[Sungrow] ✓ ESS data:', parsed);
+          }
+        } catch (e) {
+          console.warn('[Sungrow] ESS endpoint failed:', e.message);
+        }
+      }
+
+      if (parsed && Object.keys(parsed).length > 1) {
+        setLiveData(prev => ({ ...prev, ...parsed }));
+        setIsDemo(false);
+        setConnected(true);
+        setError(null);
+      } else {
+        setError('Device offline or no real-time data');
+      }
+
       setLastUpdate(new Date());
       setAuthStep(AUTH_STEP.DONE);
 
     } catch (err) {
       console.error('[Sungrow] fetchData error:', err.message);
       if (/token|auth|expire|E000|session/i.test(err.message)) {
-        clearStoredToken();
-        setToken(null);
-        setAuthStep(AUTH_STEP.IDLE);
+        clearStoredToken(); setToken(null); setAuthStep(AUTH_STEP.IDLE);
       } else {
         setAuthStep(AUTH_STEP.ERROR);
       }
@@ -282,14 +291,14 @@ const SungrowLivePanel = ({ theme }) => {
       const devList = devData.pageList ?? devData.list ?? devData.device_list ?? [];
       if (!devList.length) throw new Error('No devices found for plant: ' + psId);
 
-      console.log('[Sungrow] Devices found:', devList.map(d => `${d.ps_key}(type:${d.device_type})`));
+      console.log('[Sungrow] Devices:', devList.map(d => `${d.ps_key}(type:${d.device_type})`));
 
-      // ใช้ device_type จาก API จริงๆ
       const psKeys  = devList.slice(0, 10).map(d => d.ps_key).filter(Boolean);
       const detType = devList[0]?.device_type ?? DEVICE_TYPE.INVERTER;
 
-      if (!psKeys.length) throw new Error('No ps_key values found in device list');
+      if (!psKeys.length) throw new Error('No ps_key found');
 
+      setDeviceType(detType);
       setPsKeyList(psKeys);
       await fetchData(tok, psKeys, detType);
 
@@ -301,58 +310,44 @@ const SungrowLivePanel = ({ theme }) => {
     }
   }, [fetchData]);
 
-  // ─── Full login + connect ───────────────────────────────────
+  // ─── Full login ─────────────────────────────────────────────
   const connect = useCallback(async () => {
-    setError(null);
-    setConnected(false);
-
+    setError(null); setConnected(false);
     try {
       setAuthStep(AUTH_STEP.LOGGING_IN);
       const loginData = await login(CREDENTIALS.username, CREDENTIALS.password);
       const tok = loginData.token ?? loginData.access_token;
       if (!tok) throw new Error('No token returned from login');
-
       const authorizedTok = await authorizeApp(tok);
       setToken(authorizedTok);
-
       await discoverAndFetch(authorizedTok);
-
     } catch (err) {
       console.error('[Sungrow] connect error:', err.message);
       setError(err.message);
       setAuthStep(AUTH_STEP.ERROR);
-      clearStoredToken();
-      setToken(null);
+      clearStoredToken(); setToken(null);
     }
   }, [discoverAndFetch]);
 
-  // ─── On mount ───────────────────────────────────────────────
   useEffect(() => {
     const stored = getStoredToken();
-    if (stored) {
-      discoverAndFetch(stored).catch(() => connect());
-    } else {
-      connect();
-    }
+    if (stored) discoverAndFetch(stored).catch(() => connect());
+    else connect();
     return () => clearInterval(pollerRef.current);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ─── Poll every 5 minutes ───────────────────────────────────
   useEffect(() => {
     if (!token || !psKeyList.length) return;
     clearInterval(pollerRef.current);
-    pollerRef.current = setInterval(
-      () => fetchData(token, psKeyList, deviceType),
-      5 * 60_000
-    );
+    pollerRef.current = setInterval(() => fetchData(token, psKeyList, deviceType), 5 * 60_000);
     return () => clearInterval(pollerRef.current);
   }, [token, psKeyList, deviceType, fetchData]);
 
   const loading = [AUTH_STEP.LOGGING_IN, AUTH_STEP.FETCHING].includes(authStep);
 
   const {
-    activePower, feedInPower, loadPower, totalPvYield,
+    activePower, feedInPower, loadPower, totalPvYield, dailyPvYield,
     totalPurchased, totalFeedIn, batteryLevel, batteryCharge,
     batteryDischarge, gridFrequency, powerFactor, phaseVoltage,
   } = liveData;
@@ -363,8 +358,6 @@ const SungrowLivePanel = ({ theme }) => {
     <div className={`rounded-2xl border overflow-hidden transition-all duration-300 ${
       isDark ? 'bg-slate-900/50 border-slate-700' : 'bg-slate-50 border-slate-200'
     }`}>
-
-      {/* ── Header ──────────────────────────────────────── */}
       <div
         className={`flex items-center justify-between px-5 py-4 cursor-pointer select-none border-b ${
           isDark ? 'border-slate-700 hover:bg-slate-800/40' : 'border-slate-200 hover:bg-slate-100/60'
@@ -380,7 +373,7 @@ const SungrowLivePanel = ({ theme }) => {
               Sungrow Live Data
               {loading && (
                 <span className="ml-2 text-[10px] font-normal text-slate-400 animate-pulse">
-                  { authStep === AUTH_STEP.LOGGING_IN ? 'Logging in…' : 'Fetching data…' }
+                  {authStep === AUTH_STEP.LOGGING_IN ? 'Logging in…' : 'Fetching data…'}
                 </span>
               )}
             </p>
@@ -396,38 +389,30 @@ const SungrowLivePanel = ({ theme }) => {
             )}
           </div>
         </div>
-
         <div className="flex items-center gap-2">
           <span className={`hidden sm:flex items-center gap-1.5 text-[10px] font-semibold px-2.5 py-1 rounded-full ${
             connected ? 'bg-green-500/10 text-green-400' : 'bg-slate-500/10 text-slate-400'
           }`}>
             {connected
-              ? <><Wifi    className="w-3 h-3" /> Live</>
+              ? <><Wifi className="w-3 h-3" /> Live</>
               : <><WifiOff className="w-3 h-3" /> {loading ? 'Connecting…' : 'Demo'}</>}
           </span>
-
           <button
             onClick={e => { e.stopPropagation(); connect(); }}
             disabled={loading}
-            className={`p-1.5 rounded-lg transition disabled:opacity-40 ${
-              isDark ? 'hover:bg-slate-700' : 'hover:bg-slate-200'
-            }`}
+            className={`p-1.5 rounded-lg transition disabled:opacity-40 ${isDark ? 'hover:bg-slate-700' : 'hover:bg-slate-200'}`}
             title={connected ? 'Refresh' : 'Reconnect'}
           >
             {connected
               ? <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''} ${isDark ? 'text-slate-400' : 'text-slate-500'}`} />
-              : <LogIn     className={`w-3.5 h-3.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`} />}
+              : <LogIn className={`w-3.5 h-3.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`} />}
           </button>
-
-          <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${
-            expanded ? 'rotate-180' : ''} ${isDark ? 'text-slate-400' : 'text-slate-500'}`} />
+          <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${expanded ? 'rotate-180' : ''} ${isDark ? 'text-slate-400' : 'text-slate-500'}`} />
         </div>
       </div>
 
-      {/* ── Body ──────────────────────────────────────────── */}
       {expanded && (
         <div className="p-5 space-y-5">
-
           {loading && <AuthProgress step={authStep} theme={theme} />}
 
           <PowerFlow activePower={activePower} feedIn={feedInPower} load={loadPower} theme={theme} />
@@ -447,24 +432,38 @@ const SungrowLivePanel = ({ theme }) => {
               <div className="min-w-0">
                 <p className={`text-[11px] font-medium mb-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Battery</p>
                 <p className={`text-sm font-bold truncate ${isDark ? 'text-white' : 'text-slate-800'}`}>
-                  {batteryCharge > 0
-                    ? `↑ Charging ${batteryCharge} kW`
-                    : batteryDischarge > 0
-                    ? `↓ Discharging ${batteryDischarge} kW`
+                  {batteryCharge > 0 ? `↑ Charging ${batteryCharge} kW`
+                    : batteryDischarge > 0 ? `↓ Discharging ${batteryDischarge} kW`
                     : 'Idle'}
                 </p>
                 <p className={`text-[10px] mt-0.5 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>State of charge</p>
               </div>
             </div>
 
-            <MetricCard icon={TrendingUp} label="Total PV Yield" value={totalPvYield} unit="kWh" sub="Lifetime generation" color="yellow" theme={theme} />
+            <div className={`rounded-xl p-4 border ${isDark ? 'bg-slate-800/60 border-slate-700' : 'bg-white border-slate-200 shadow-sm'}`}>
+              <p className={`text-[11px] font-medium mb-3 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>PV Yield</p>
+              <div className="space-y-2">
+                {[
+                  { label: 'Today',    val: `${(dailyPvYield ?? 0).toLocaleString()} kWh`, cls: 'text-yellow-400' },
+                  { label: 'Lifetime', val: `${(totalPvYield ?? 0).toLocaleString()} kWh`, cls: isDark ? 'text-slate-300' : 'text-slate-700' },
+                ].map(({ label, val, cls }, i, arr) => (
+                  <React.Fragment key={label}>
+                    <div className="flex justify-between items-center">
+                      <span className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{label}</span>
+                      <span className={`text-xs font-bold ${cls}`}>{val}</span>
+                    </div>
+                    {i < arr.length - 1 && <div className={`h-px ${isDark ? 'bg-slate-700' : 'bg-slate-100'}`} />}
+                  </React.Fragment>
+                ))}
+              </div>
+            </div>
 
             <div className={`rounded-xl p-4 border ${isDark ? 'bg-slate-800/60 border-slate-700' : 'bg-white border-slate-200 shadow-sm'}`}>
               <p className={`text-[11px] font-medium mb-3 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Grid Balance (Lifetime)</p>
               <div className="space-y-2">
                 {[
-                  { label: 'Feed-in',         val: `${totalFeedIn.toLocaleString()} kWh`,    cls: 'text-green-400'  },
-                  { label: 'Purchased',        val: `${totalPurchased.toLocaleString()} kWh`, cls: 'text-orange-400' },
+                  { label: 'Feed-in',         val: `${(totalFeedIn ?? 0).toLocaleString()} kWh`,    cls: 'text-green-400'  },
+                  { label: 'Purchased',        val: `${(totalPurchased ?? 0).toLocaleString()} kWh`, cls: 'text-orange-400' },
                   { label: 'Self-consumption', val: `${selfConsumptionPct}%`,
                     cls: isDark ? 'text-slate-300' : 'text-slate-700' },
                 ].map(({ label, val, cls }, i, arr) => (
@@ -484,11 +483,12 @@ const SungrowLivePanel = ({ theme }) => {
             isDark ? 'bg-slate-800/40 border-slate-700' : 'bg-slate-100 border-slate-200'
           }`}>
             {[
-              { label: 'Phase A',      val: `${phaseVoltage} V`                                        },
-              { label: 'Frequency',    val: `${gridFrequency} Hz`                                      },
-              { label: 'Power Factor', val: powerFactor                                                },
-              { label: 'Devices',      val: psKeyList.length || '—'                                   },
-              { label: 'Auth',         val: connected ? `✓ type:${deviceType}` : isDemo ? 'Demo' : '—' },
+              { label: 'Phase A',      val: `${phaseVoltage} V`   },
+              { label: 'Frequency',    val: `${gridFrequency} Hz` },
+              { label: 'Power Factor', val: powerFactor           },
+              { label: 'Devices',      val: psKeyList.length || '—' },
+              { label: 'Type',         val: deviceType === DEVICE_TYPE.INVERTER ? 'Inverter' : deviceType === DEVICE_TYPE.ENERGY_STORAGE_SYSTEM ? 'ESS' : `type:${deviceType}` },
+              { label: 'Auth',         val: connected ? '✓ Live' : isDemo ? 'Demo' : '—' },
             ].map(({ label, val }) => (
               <div key={label} className="flex items-center gap-2">
                 <span className={`text-[10px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{label}</span>
@@ -496,7 +496,6 @@ const SungrowLivePanel = ({ theme }) => {
               </div>
             ))}
           </div>
-
         </div>
       )}
     </div>
