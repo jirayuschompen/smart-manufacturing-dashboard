@@ -63,7 +63,7 @@ const ESS_POINT_MAP = {
   [ESS_POINTS.PHASE_A_CURRENT]:           'phaseCurrent',
 };
 
-const ESS_POINT_IDS = Object.keys(ESS_POINT_MAP).map(Number);
+const ESS_POINT_IDS  = Object.keys(ESS_POINT_MAP).map(Number);
 
 const AUTH_STEP = {
   IDLE: 'idle', LOGGING_IN: 'logging_in',
@@ -205,77 +205,56 @@ const SungrowLivePanel = ({ theme }) => {
   const isDark    = theme === 'dark';
   const pollerRef = useRef(null);
 
-  const [token,      setToken]      = useState(getStoredToken);
-  const [psKeyList,  setPsKeyList]  = useState([]);
-  const [deviceType, setDeviceType] = useState(DEVICE_TYPE.INVERTER);
-  const [liveData,   setLiveData]   = useState(DEMO_DATA);
-  const [isDemo,     setIsDemo]     = useState(true);
-  const [authStep,   setAuthStep]   = useState(AUTH_STEP.IDLE);
-  const [lastUpdate, setLastUpdate] = useState(new Date());
-  const [connected,  setConnected]  = useState(false);
-  const [expanded,   setExpanded]   = useState(true);
-  const [error,      setError]      = useState(null);
+  const [token,        setToken]        = useState(getStoredToken);
+  const [psKeyList,    setPsKeyList]    = useState([]);
+  const [deviceType,   setDeviceType]   = useState(DEVICE_TYPE.INVERTER);
+  const [liveData,     setLiveData]     = useState(DEMO_DATA);
+  const [isDemo,       setIsDemo]       = useState(true);
+  const [authStep,     setAuthStep]     = useState(AUTH_STEP.IDLE);
+  const [lastUpdate,   setLastUpdate]   = useState(new Date());
+  const [connected,    setConnected]    = useState(false);
+  const [expanded,     setExpanded]     = useState(true);
+  const [error,        setError]        = useState(null);
 
-  // ─── Fetch — ลอง Inverter endpoint ก่อน แล้ว fallback ESS ──
+  // ─── Poll fetch (ใช้ type + keys ที่หาเจอแล้ว) ─────────────
   const fetchData = useCallback(async (tok, psKeys, detType) => {
     if (!tok || !psKeys.length) return;
     try {
       let parsed = null;
 
       if (detType === DEVICE_TYPE.INVERTER) {
-        // ── Inverter: ใช้ endpoint เฉพาะ ──────────────────────
-        console.log('[Sungrow] Trying PVInverter endpoint...');
         try {
           const result = await getPVInverterRealTimeData(tok, psKeys);
           parsed = parseDevicePoints(result, INVERTER_POINT_MAP);
-          if (parsed && Object.keys(parsed).length > 1) {
-            console.log('[Sungrow] ✓ Inverter data:', parsed);
-          }
         } catch (e) {
-          console.warn('[Sungrow] PVInverter endpoint failed:', e.message);
+          console.warn('[Sungrow] PVInverter poll failed:', e.message);
         }
-      }
-
-      if (!parsed || Object.keys(parsed).length <= 1) {
-        // ── Fallback: ESS endpoint ─────────────────────────────
-        console.log('[Sungrow] Trying ESS endpoint (device_type=14)...');
+      } else {
         try {
-          const result = await getDeviceRealTimeData(tok, psKeys, ESS_POINT_IDS, DEVICE_TYPE.ENERGY_STORAGE_SYSTEM);
+          const result = await getDeviceRealTimeData(tok, psKeys, ESS_POINT_IDS, detType);
           parsed = parseDevicePoints(result, ESS_POINT_MAP);
-          if (parsed && Object.keys(parsed).length > 1) {
-            setDeviceType(DEVICE_TYPE.ENERGY_STORAGE_SYSTEM);
-            console.log('[Sungrow] ✓ ESS data:', parsed);
-          }
         } catch (e) {
-          console.warn('[Sungrow] ESS endpoint failed:', e.message);
+          console.warn(`[Sungrow] type=${detType} poll failed:`, e.message);
         }
       }
 
       if (parsed && Object.keys(parsed).length > 1) {
         setLiveData(prev => ({ ...prev, ...parsed }));
-        setIsDemo(false);
         setConnected(true);
         setError(null);
-      } else {
-        setError('Device offline or no real-time data');
       }
-
       setLastUpdate(new Date());
-      setAuthStep(AUTH_STEP.DONE);
-
     } catch (err) {
       console.error('[Sungrow] fetchData error:', err.message);
       if (/token|auth|expire|E000|session/i.test(err.message)) {
         clearStoredToken(); setToken(null); setAuthStep(AUTH_STEP.IDLE);
-      } else {
-        setAuthStep(AUTH_STEP.ERROR);
       }
       setConnected(false);
       setError(err.message);
     }
   }, []);
 
-  // ─── Discover plants → devices → fetch ─────────────────────
+  // ─── Discover: group ps_keys by type → try each type ───────
   const discoverAndFetch = useCallback(async (tok) => {
     setAuthStep(AUTH_STEP.FETCHING);
     setError(null);
@@ -291,16 +270,67 @@ const SungrowLivePanel = ({ theme }) => {
       const devList = devData.pageList ?? devData.list ?? devData.device_list ?? [];
       if (!devList.length) throw new Error('No devices found for plant: ' + psId);
 
-      console.log('[Sungrow] Devices:', devList.map(d => `${d.ps_key}(type:${d.device_type})`));
+      // ── Group ps_keys by device_type (from ps_key format: psId_TYPE_ch_port) ──
+      const byType = {};
+      for (const d of devList) {
+        if (!d.ps_key) continue;
+        const typeFromKey = parseInt(d.ps_key.split('_')[1]);
+        const t = (!isNaN(typeFromKey) ? typeFromKey : null) ?? d.device_type ?? 0;
+        if (!byType[t]) byType[t] = [];
+        byType[t].push(d.ps_key);
+      }
+      console.log('[Sungrow] Devices by type:', byType);
 
-      const psKeys  = devList.slice(0, 10).map(d => d.ps_key).filter(Boolean);
-      const detType = devList[0]?.device_type ?? DEVICE_TYPE.INVERTER;
+      // ── Try types in priority order ──────────────────────────
+      // Priority: 14 (ESS) → 1 (Inverter) → 11 → rest
+      const priorityOrder = [14, 1, 11, ...Object.keys(byType).map(Number)];
+      const orderedTypes  = [...new Set(priorityOrder)].filter(t => byType[t]);
 
-      if (!psKeys.length) throw new Error('No ps_key found');
+      let gotData = false;
 
-      setDeviceType(detType);
-      setPsKeyList(psKeys);
-      await fetchData(tok, psKeys, detType);
+      for (const t of orderedTypes) {
+        const keys = byType[t];
+        console.log(`[Sungrow] Trying type=${t} keys=${keys}`);
+
+        try {
+          let result, parsed, pointMap;
+
+          if (t === DEVICE_TYPE.INVERTER) {
+            // PV Inverter — dedicated endpoint
+            result   = await getPVInverterRealTimeData(tok, keys);
+            pointMap = INVERTER_POINT_MAP;
+          } else {
+            // Generic endpoint — try ESS point IDs against every type
+            result   = await getDeviceRealTimeData(tok, keys, ESS_POINT_IDS, t);
+            pointMap = ESS_POINT_MAP;
+          }
+
+          parsed = parseDevicePoints(result, pointMap);
+
+          if (parsed && Object.keys(parsed).length > 1) {
+            console.log(`[Sungrow] ✓ Got data with type=${t}`, parsed);
+            setDeviceType(t);
+            setPsKeyList(keys);
+            setLiveData(prev => ({ ...prev, ...parsed }));
+            setIsDemo(false);
+            setConnected(true);
+            setError(null);
+            setLastUpdate(new Date());
+            setAuthStep(AUTH_STEP.DONE);
+            gotData = true;
+            break;
+          } else {
+            console.log(`[Sungrow] type=${t} returned no usable data`);
+          }
+        } catch (e) {
+          console.warn(`[Sungrow] type=${t} error:`, e.message);
+        }
+      }
+
+      if (!gotData) {
+        setError(`No data from any device type (tried: ${orderedTypes.join(', ')})`);
+        setAuthStep(AUTH_STEP.DONE);
+      }
 
     } catch (err) {
       console.error('[Sungrow] discoverAndFetch error:', err.message);
@@ -308,7 +338,7 @@ const SungrowLivePanel = ({ theme }) => {
       setConnected(false);
       setAuthStep(AUTH_STEP.ERROR);
     }
-  }, [fetchData]);
+  }, []);
 
   // ─── Full login ─────────────────────────────────────────────
   const connect = useCallback(async () => {
@@ -353,6 +383,11 @@ const SungrowLivePanel = ({ theme }) => {
   } = liveData;
 
   const selfConsumptionPct = ((1 - totalPurchased / (totalPvYield || 1)) * 100).toFixed(1);
+
+  const typeLabel = deviceType === DEVICE_TYPE.INVERTER ? 'Inverter'
+    : deviceType === DEVICE_TYPE.ENERGY_STORAGE_SYSTEM ? 'ESS'
+    : deviceType === DEVICE_TYPE.METER ? 'Meter'
+    : `type:${deviceType}`;
 
   return (
     <div className={`rounded-2xl border overflow-hidden transition-all duration-300 ${
@@ -487,7 +522,7 @@ const SungrowLivePanel = ({ theme }) => {
               { label: 'Frequency',    val: `${gridFrequency} Hz` },
               { label: 'Power Factor', val: powerFactor           },
               { label: 'Devices',      val: psKeyList.length || '—' },
-              { label: 'Type',         val: deviceType === DEVICE_TYPE.INVERTER ? 'Inverter' : deviceType === DEVICE_TYPE.ENERGY_STORAGE_SYSTEM ? 'ESS' : `type:${deviceType}` },
+              { label: 'Type',         val: typeLabel             },
               { label: 'Auth',         val: connected ? '✓ Live' : isDemo ? 'Demo' : '—' },
             ].map(({ label, val }) => (
               <div key={label} className="flex items-center gap-2">
