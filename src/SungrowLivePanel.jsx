@@ -267,7 +267,7 @@ const SungrowLivePanel = ({ theme }) => {
       const psId = plantList[0].ps_id ?? plantList[0].id ?? plantList[0].plant_code;
 
       const devData = await getDeviceList(tok, psId);
-      const devList = devData.list ?? devData.device_list ?? devData.devices ?? [];
+      const devList = devData.pageList ?? devData.list ?? devData.device_list ?? [];
       if (!devList.length) throw new Error('No devices found for plant: ' + psId);
 
       // Prefer ESS (type 14), fall back to all devices
