@@ -8,9 +8,9 @@
 //   VITE_SUNGROW_BASE_URL=https://sungrow-proxy.xxx.workers.dev
 // ============================================================
 
-const SUNGROW_BASE = 'https://web3.isolarcloud.com.hk';
+const SUNGROW_BASE = 'https://gateway.isolarcloud.com.hk/';
 const ACCESS_KEY = 'dw7an4xui4jccjw79macpwk55y1awa9c'; // ← ตรงนี้ด้วย
-const SYS_CODE     = '901';
+const SYS_CODE = '901';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin':  '*',

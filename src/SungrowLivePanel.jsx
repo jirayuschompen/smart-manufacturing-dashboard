@@ -261,7 +261,7 @@ const SungrowLivePanel = ({ theme }) => {
     setError(null);
     try {
       const plantData = await getPlantList(tok);
-      const plantList = plantData.page_list ?? plantData.list ?? plantData.plants ?? [];
+      const plantList = plantData.pageList ?? plantData.page_list ?? plantData.list ?? plantData.plants ?? [];
       if (!plantList.length) throw new Error('No plants found for this account');
 
       const psId = plantList[0].ps_id ?? plantList[0].id ?? plantList[0].plant_code;
