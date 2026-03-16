@@ -848,7 +848,7 @@
         {/* Main Content */}
         <main className="max-w-8xl mx-auto px-20 py-2">
           
-          {/* --- Overview Tab --- */}
+          {/* -- Overview Tab -- */}
           {activeTab === 'overview' && (
             <div className="space-y-8">
               <Overview 
