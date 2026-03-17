@@ -3,24 +3,25 @@
   import { TrendingUp, AlertTriangle, Activity, Settings, Calendar, Package, Factory, Cpu, 
     Bell, ChevronRight, CheckCircle, XCircle, Clock, X, User, LogOut, Shield, 
     FileText, Loader, Check, Upload, Download, Cloud, Wind, Droplets, Gauge, 
-    Search, Info } from 'lucide-react';
+    Search, Map  } from 'lucide-react';
   import Overview from './Overviewpage';
   import Forecast from './Forecastpage';
   import Planning from './Planningpage';
   import Maintenance from './Maintenancepage';
   import LoginMockup from './login';
   import SungrowLivePanel from './SungrowLivePanel';
+  import FleetOverviewPage from './FleetOverviewPage';
 
   // --- App Component ---
-  const App = () => {
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-    if (!isAuthenticated) {
-      return <LoginMockup onLogin={() => setIsAuthenticated(true)} />;
-    }
-
-    return <Dashboard onLogout={() => setIsAuthenticated(false)} />;
-  };
+const App = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+ 
+  if (!isAuthenticated) {
+    return <LoginMockup onLogin={() => setIsAuthenticated(true)} />;
+  }
+  return <Dashboard onLogout={() => setIsAuthenticated(false)} />;
+};
+ 
 
   const generateDailyData = () => {
     const data = [];
@@ -71,7 +72,7 @@
 
   // --- Dashboard Component ---
   const Dashboard = ({ onLogout }) => {
-    const [activeTab, setActiveTab] = useState('overview');
+    const [activeTab, setActiveTab] = useState('fleet');
     const [showNotifications, setShowNotifications] = useState(false);
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [showForecastModal, setShowForecastModal] = useState(false);
@@ -713,8 +714,8 @@
                     </div>
                   )}
                 </div>
-                <div className="relative z-10">
-                  <button 
+                {/* <div className="relative z-10"> */}
+                  {/* <button 
                     onClick={() => { setShowUserMenu(!showUserMenu); setShowNotifications(false); }}
                     className={`flex items-center gap-2 p-1.5 lg:px-3 lg:py-2 rounded-full transition-all border ${theme === 'dark' ? 'bg-slate-700 border-slate-600 hover:border-slate-500' : 'bg-white border-slate-200 hover:border-blue-300'}`}
                   >
@@ -751,8 +752,8 @@
                         <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30 rounded-xl transition-colors"><LogOut className="w-4 h-4" />{currentLang.logout}</button>
                       </div>
                     </div>
-                  )}
-                </div>
+                  )} */}
+                {/* </div> */}
               </div>
             </div>
           </div>
@@ -786,6 +787,7 @@
           {/* Sidebar Nav Items */}
           <nav className="flex-1 p-3 space-y-1">
             {[
+              { id: 'fleet',        label: 'Fleet Map',                      icon: Map        },
               { id: 'overview',     label: currentLang.overview,             icon: Activity  },
               { id: 'forecast',     label: currentLang.demandForecasting,    icon: TrendingUp },
               { id: 'maintenance',  label: currentLang.predictiveMaintenance, icon: Settings  },
@@ -811,18 +813,35 @@
             })}
           </nav>
           
-          {/* Active tab indicator at bottom */}
-          <div className={`px-5 py-4 border-t ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>
-            <p className={`text-[10px] uppercase tracking-widest font-semibold ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>Current View</p>
-            <p className={`text-sm font-bold mt-0.5 ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
-              {[
-                { id: 'overview', label: currentLang.overview },
-                { id: 'forecast', label: currentLang.demandForecasting },
-                { id: 'maintenance', label: currentLang.predictiveMaintenance },
-                { id: 'planning', label: currentLang.productionPlanning },
-              ].find(t => t.id === activeTab)?.label}
-            </p>
-          </div>
+          {/* ── Sidebar Bottom: User + Settings + Logout ── */}
+<div className={`px-4 py-4 border-t space-y-3 ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>
+
+  {/* Admin info */}
+  <div className="flex items-center gap-3">
+    <div className="w-10 h-10 bg-gradient-to-tr from-blue-500 to-indigo-500 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-md flex-shrink-0">A</div>
+    <div className="min-w-0">
+      <p className={`text-sm font-bold leading-none ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>Admin User</p>
+      <p className={`text-[11px] mt-0.5 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Super Admin</p>
+    </div>
+  </div>
+
+  {/* Language + Theme */}
+  <div className="grid grid-cols-2 gap-2">
+    <div className={`p-1 rounded-lg flex ${theme === 'dark' ? 'bg-slate-700' : 'bg-slate-200'}`}>
+      <button onClick={() => setLanguage('th')} className={`flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all ${language === 'th' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}>TH</button>
+      <button onClick={() => setLanguage('en')} className={`flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all ${language === 'en' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}>EN</button>
+    </div>
+    <button onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} className={`flex items-center justify-center gap-1.5 py-1.5 text-[10px] font-semibold rounded-lg border transition-all ${theme === 'dark' ? 'border-slate-600 hover:bg-slate-700 text-slate-300' : 'border-slate-300 hover:bg-white text-slate-600'}`}>
+      {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
+    </button>
+  </div>
+
+  {/* Logout */}
+  <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 py-2 text-xs font-semibold text-red-500 bg-red-500/10 hover:bg-red-500/20 rounded-xl transition">
+    <LogOut className="w-3.5 h-3.5" /> Logout
+  </button>
+
+</div>
         </div>            
 
         {/* Navigation Tabs */}
@@ -847,7 +866,11 @@
 
         {/* Main Content */}
         <main className="max-w-8xl mx-auto px-20 py-2">
-          
+          {activeTab === 'fleet' && (
+            <div className="h-[calc(100vh-80px)] -mx-20 -mt-2">
+              <FleetOverviewPage theme={theme} />
+            </div>
+          )}
           {/* -- Overview Tab -- */}
           {activeTab === 'overview' && (
             <div className="space-y-8">
