@@ -650,7 +650,7 @@ const App = () => {
           {(showNotifications || showUserMenu) && (
             <div className="fixed inset-0 z-0 bg-transparent" onClick={() => { setShowNotifications(false); setShowUserMenu(false); }}></div>
           )}
-          <div className="max-w-10xl mx-auto px-14 py-4">
+          <div className="max-w-9xl mx-auto px-15 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 
@@ -663,7 +663,7 @@ const App = () => {
                   </svg>
                 </button>
 
-                <div className="p-1.5 rounded-xl shadow-md shrink-0">
+                <div className="p-1.5 rounded-xl shadow-md shrink-1">
                   <img 
                     src="https://github.com/jirayuschompen/smart-manufacturing-dashboard/blob/main/src/assets/Sunthesiz.png?raw=true" 
                     alt="Sunthesiz Logo"

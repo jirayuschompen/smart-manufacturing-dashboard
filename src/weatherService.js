@@ -54,17 +54,17 @@ const calculateCloudCoverage = (low, med, high) => {
 };
 
 // ====================================================================
-// API Fetch Function - FIXED VERSION
+// API Fetch Function - SUPPORTS CUSTOM LAT/LNG
 // ====================================================================
-export const fetchWeatherData = async () => {
+export const fetchWeatherDataByLocation = async (latitude, longitude) => {
   try {
     const url = `${WEATHER_CONFIG.API_BASE_URL}/forecast/location/hourly/at?` +
-      `lat=${WEATHER_CONFIG.LATITUDE}&` +
-      `lon=${WEATHER_CONFIG.LONGITUDE}&` +
+      `lat=${latitude}&` +
+      `lon=${longitude}&` +
       `fields=${WEATHER_CONFIG.FIELDS}&` +
       `duration=1`;
 
-    console.log(' Calling TMD API:', url);
+    console.log(`🌤️ Calling TMD API for PV at [${latitude.toFixed(4)}, ${longitude.toFixed(4)}]`);
 
     const response = await fetch(url, {
       method: 'GET',
@@ -74,123 +74,64 @@ export const fetchWeatherData = async () => {
       }
     });
 
-    console.log('Response Status:', response.status, response.statusText);
-
     if (!response.ok) {
       throw new Error(`TMD API Error: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
-    console.log(' Raw API Response:', data);
-    
-    // ====================================================================
-    // 🔍 FIXED: ตรวจสอบ Response Format แบบละเอียด
-    // ====================================================================
-    
-    // ตรวจสอบ Response Format หลายแบบ
     let weatherApiData = null;
     
-    // Format 1: WeatherForcasts (typo ใน API)
-    if (data.WeatherForcasts && Array.isArray(data.WeatherForcasts) && data.WeatherForcasts.length > 0) {
-      const forecast = data.WeatherForcasts[0];
-      if (forecast.forecasts && Array.isArray(forecast.forecasts) && forecast.forecasts.length > 0) {
-        weatherApiData = forecast.forecasts[0].data;
-        console.log('Format 1: WeatherForcasts found');
-      }
-    }
-    
-    // Format 2: WeatherForecasts (correct spelling)
-    if (!weatherApiData && data.WeatherForecasts && Array.isArray(data.WeatherForecasts) && data.WeatherForecasts.length > 0) {
-      const forecast = data.WeatherForecasts[0];
-      if (forecast.forecasts && Array.isArray(forecast.forecasts) && forecast.forecasts.length > 0) {
-        weatherApiData = forecast.forecasts[0].data;
-        console.log(' Format 2: WeatherForecasts found');
-      }
-    }
-    
-    // Format 3: ข้อมูลอยู่ระดับบนสุด
-    if (!weatherApiData && data.location && data.forecasts) {
-      if (Array.isArray(data.forecasts) && data.forecasts.length > 0) {
-        weatherApiData = data.forecasts[0].data;
-        console.log(' Format 3: Direct forecasts found');
-      }
-    }
-    
-    // Format 4: ข้อมูลอยู่ใน data.data
-    if (!weatherApiData && data.data) {
+    if (data.WeatherForcasts?.length > 0) {
+      weatherApiData = data.WeatherForcasts[0].forecasts?.[0]?.data;
+    } else if (data.WeatherForecasts?.length > 0) {
+      weatherApiData = data.WeatherForecasts[0].forecasts?.[0]?.data;
+    } else if (data.location && data.forecasts?.length > 0) {
+      weatherApiData = data.forecasts[0].data;
+    } else if (data.data) {
       weatherApiData = data.data;
-      console.log(' Format 4: data.data found');
     }
 
-    // ====================================================================
-    // ถ้าไม่เจอข้อมูลเลย ให้ Log และใช้ Fallback
-    // ====================================================================
     if (!weatherApiData) {
-      console.error('Invalid API Response Structure:', JSON.stringify(data, null, 2));
-      throw new Error('Invalid API response format - No weather data found in response');
+      throw new Error('Invalid API response format');
     }
 
-    console.log(' Weather Data Extracted:', weatherApiData);
     return parseWeatherData(weatherApiData);
 
   } catch (error) {
-    console.error('Error fetching weather data:', error);
-    console.error('Error Details:', error.message);
-    
-    // Return fallback data
+    console.error('Error fetching weather data for location:', error.message);
     return getFallbackWeatherData();
   }
+};
+
+// ====================================================================
+// Original function for default location
+// ====================================================================
+export const fetchWeatherData = async () => {
+  return fetchWeatherDataByLocation(WEATHER_CONFIG.LATITUDE, WEATHER_CONFIG.LONGITUDE);
 };
 
 // ====================================================================
 // Parse Weather Data
 // ====================================================================
 const parseWeatherData = (apiData) => {
-  console.log('Parsing weather data:', apiData);
-  
   const parsed = {
-    // Temperature
     temp: apiData.tc ? Math.round(apiData.tc * 10) / 10 : 32.5,
-    
-    // Condition
     condition: CONDITION_MAP[apiData.cond] || 'Partly Cloudy',
-    
-    // Wind Speed (m/s → km/h)
     windSpeed: apiData.ws10m ? msToKmh(apiData.ws10m) : 12,
-    
-    // Wind Direction
     windDirection: apiData.wd10m || 0,
-    
-    // Humidity
     humidity: apiData.rh ? Math.round(apiData.rh) : 65,
-    
-    // Pressure
     pressure: apiData.slp ? Math.round(apiData.slp) : 1012,
-    
-    // Light (W/m²)
     light: 850,
-    
-    // PM 2.5 (Mock)
     pm25: 12,
-    
-    // AQI (Mock)
     aqi: 'Good',
-    
-    // Rain
     rain: apiData.rain || 0,
-    
-    // Cloud Coverage
     cloudCoverage: calculateCloudCoverage(
       apiData.cloudlow || 0,
       apiData.cloudmed || 0,
       apiData.cloudhigh || 0
     ),
-    
-    // Timestamp
     lastUpdated: new Date().toISOString()
   };
-  
-  console.log('Parsed weather data:', parsed);
   return parsed;
 };
 
@@ -198,7 +139,6 @@ const parseWeatherData = (apiData) => {
 // Fallback Data
 // ====================================================================
 const getFallbackWeatherData = () => {
-  console.warn('Using fallback weather data');
   return {
     temp: 32.5,
     condition: 'Partly Cloudy',
@@ -239,15 +179,7 @@ class WeatherDataManager {
 
   async updateWeatherData() {
     try {
-      console.log('Fetching weather data from TMD API...');
       this.currentData = await fetchWeatherData();
-      
-      if (this.currentData.isFallback) {
-        console.warn('Using fallback weather data');
-      } else {
-        console.log('Weather data updated successfully');
-      }
-      
       this.notifyListeners();
       return this.currentData;
     } catch (error) {
@@ -312,7 +244,7 @@ class WeatherDataManager {
 export const weatherManager = new WeatherDataManager();
 
 // ====================================================================
-// React Hook
+// React Hook - Default Location
 // ====================================================================
 export const useWeatherData = () => {
   const [weatherData, setWeatherData] = React.useState(null);
@@ -328,7 +260,6 @@ export const useWeatherData = () => {
         setError(null);
       } catch (err) {
         setError(err.message);
-        console.error('Weather initialization error:', err);
       } finally {
         setIsLoading(false);
       }
@@ -358,12 +289,46 @@ export const useWeatherData = () => {
     }
   };
 
-  return {
-    weatherData,
-    isLoading,
-    error,
-    refresh
-  };
+  return { weatherData, isLoading, error, refresh };
+};
+
+// ====================================================================
+// React Hook - Custom Location (For Each PV Plant)
+// ====================================================================
+export const useWeatherDataByLocation = (latitude, longitude) => {
+  const [weatherData, setWeatherData] = React.useState(null);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState(null);
+
+  React.useEffect(() => {
+    const fetchData = async () => {
+      if (!latitude || !longitude) {
+        setWeatherData(null);
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        const data = await fetchWeatherDataByLocation(latitude, longitude);
+        setWeatherData(data);
+        setError(null);
+      } catch (err) {
+        setError(err.message);
+        setWeatherData(getFallbackWeatherData());
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+
+    // Auto-refresh every 30 minutes
+    const interval = setInterval(fetchData, WEATHER_CONFIG.UPDATE_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [latitude, longitude]);
+
+  return { weatherData, isLoading, error };
 };
 
 // ====================================================================
