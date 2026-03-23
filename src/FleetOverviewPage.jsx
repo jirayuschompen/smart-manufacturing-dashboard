@@ -1,6 +1,6 @@
 // FleetOverviewPage.jsx — Leaflet map via srcdoc iframe + Weather API per plant
 import { useState, useEffect, useRef } from 'react';
-import { ChevronRight, Thermometer, Zap, Wind, Droplets } from 'lucide-react';
+import { ChevronRight, Thermometer, Wind, Droplets } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar,
   ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid,
@@ -86,20 +86,20 @@ const getYieldToNow = (dailyYield, curFrac) => {
 
 const PLANTS = [
   { id: 'PV1', name: 'ETEM-PV1', lat: 12.312631, lng: 102.598152,
-    capacity: 120, power: 97.51, pr: 78.4, irradiation: 5.8, status: 'online', chipPos: 'above' },
-  { id: 'PV2', name: 'ETE-PV2', lat: 13.821041, lng: 102.298019,
-    capacity: 100, power: 45.20, pr: 81.2, irradiation: 5.6, status: 'online', chipPos: 'above' },
-  { id: 'PV3', name: 'ETE-PV3', lat: 13.648165, lng: 102.461136,
-    capacity: 45,  power: 62.80, pr: 72.1, irradiation: 5.4, status: 'warning', chipPos: 'below' },
-  { id: 'PV4', name: 'ETE-PV4', lat: 11.090021, lng: 99.442207,
-    capacity: 100, power: 28.40, pr: 82.8, irradiation: 6.1, status: 'online', chipPos: 'above' },
+    capacity: 120, power: 97.51, pr: 78.4, irradiation: 5.8, status: 'online',  type: 'solar'   },
+  { id: 'PV2', name: 'ETE-PV2',  lat: 13.821041, lng: 102.298019,
+    capacity: 100, power: 45.20, pr: 81.2, irradiation: 5.6, status: 'online',  type: 'solar'   },
+  { id: 'PV3', name: 'ETE-PV3',  lat: 13.648165, lng: 102.461136,
+    capacity: 45,  power: 62.80, pr: 72.1, irradiation: 5.4, status: 'warning', type: 'biomass' },
+  { id: 'PV4', name: 'ETE-PV4',  lat: 11.090021, lng: 99.442207,
+    capacity: 100, power: 28.40, pr: 82.8, irradiation: 6.1, status: 'online',  type: 'solar'   },
 ];
 
 const fmt = (v, d = 1) => Number(v).toFixed(d);
 const statusColor = (s) =>
   s === 'online' ? '#22c55e' : s === 'warning' ? '#f59e0b' : '#ef4444';
 
-const totalCapacity = PLANTS.reduce((s, p) => s + p.capacity, 0);
+// const totalCapacity = PLANTS.reduce((s, p) => s + p.capacity, 0);
 
 const Panel = ({ children, className = '', theme }) => (
   <div className={`rounded-xl border ${
@@ -111,61 +111,197 @@ const Panel = ({ children, className = '', theme }) => (
   </div>
 );
 
-// ── Weather Mini Card for detail popup ──────────────────────
-const WeatherMiniCard = ({ weather, theme }) => {
+// ── Weather condition → SVG icon ────────────────────────────
+const WeatherIcon = ({ condition = 'Clear', size = 40 }) => {
+  const s = size;
+  const icons = {
+    'Clear': (
+      <svg width={s} height={s} viewBox="0 0 40 40" fill="none">
+        <circle cx="20" cy="20" r="9" fill="#fbbf24" opacity="0.95"/>
+        {[0,45,90,135,180,225,270,315].map(deg => {
+          const r = deg * Math.PI / 180;
+          return <line key={deg}
+            x1={20+13*Math.cos(r)} y1={20+13*Math.sin(r)}
+            x2={20+17*Math.cos(r)} y2={20+17*Math.sin(r)}
+            stroke="#fbbf24" strokeWidth="2.5" strokeLinecap="round"/>;
+        })}
+      </svg>
+    ),
+    'Partly Cloudy': (
+      <svg width={s} height={s} viewBox="0 0 40 40" fill="none">
+        <circle cx="16" cy="17" r="7" fill="#fbbf24" opacity="0.9"/>
+        {[225,270,315].map(deg => {
+          const r = deg * Math.PI / 180;
+          return <line key={deg}
+            x1={16+10*Math.cos(r)} y1={17+10*Math.sin(r)}
+            x2={16+13*Math.cos(r)} y2={17+13*Math.sin(r)}
+            stroke="#fbbf24" strokeWidth="2" strokeLinecap="round"/>;
+        })}
+        <ellipse cx="24" cy="26" rx="9" ry="6" fill="#94a3b8" opacity="0.85"/>
+        <ellipse cx="18" cy="27" rx="7" ry="5" fill="#94a3b8" opacity="0.85"/>
+        <ellipse cx="28" cy="28" rx="6" ry="4.5" fill="#cbd5e1" opacity="0.8"/>
+      </svg>
+    ),
+    'Cloudy': (
+      <svg width={s} height={s} viewBox="0 0 40 40" fill="none">
+        <ellipse cx="22" cy="22" rx="11" ry="7" fill="#64748b" opacity="0.9"/>
+        <ellipse cx="15" cy="23" rx="9" ry="6" fill="#64748b" opacity="0.9"/>
+        <ellipse cx="27" cy="24" rx="8" ry="5.5" fill="#94a3b8" opacity="0.8"/>
+        <ellipse cx="20" cy="18" rx="7" ry="5" fill="#94a3b8" opacity="0.75"/>
+      </svg>
+    ),
+    'Overcast': (
+      <svg width={s} height={s} viewBox="0 0 40 40" fill="none">
+        <ellipse cx="20" cy="23" rx="13" ry="8" fill="#475569" opacity="0.95"/>
+        <ellipse cx="14" cy="22" rx="9" ry="6" fill="#475569"/>
+        <ellipse cx="27" cy="22" rx="9" ry="6" fill="#475569"/>
+        <ellipse cx="20" cy="17" rx="8" ry="5.5" fill="#64748b" opacity="0.8"/>
+      </svg>
+    ),
+    'Light Rain': (
+      <svg width={s} height={s} viewBox="0 0 40 40" fill="none">
+        <ellipse cx="20" cy="18" rx="11" ry="7" fill="#64748b" opacity="0.85"/>
+        <ellipse cx="14" cy="19" rx="8" ry="5.5" fill="#64748b" opacity="0.85"/>
+        {[14,20,26].map((x,i) => (
+          <line key={i} x1={x} y1="28" x2={x-2} y2="34"
+            stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" opacity="0.8"/>
+        ))}
+      </svg>
+    ),
+    'Moderate Rain': (
+      <svg width={s} height={s} viewBox="0 0 40 40" fill="none">
+        <ellipse cx="20" cy="17" rx="12" ry="7" fill="#475569" opacity="0.9"/>
+        <ellipse cx="13" cy="18" rx="8" ry="5.5" fill="#475569" opacity="0.9"/>
+        {[12,18,24,30].map((x,i) => (
+          <line key={i} x1={x} y1="26" x2={x-3} y2="34"
+            stroke="#3b82f6" strokeWidth="2.2" strokeLinecap="round" opacity="0.85"/>
+        ))}
+      </svg>
+    ),
+    'Heavy Rain': (
+      <svg width={s} height={s} viewBox="0 0 40 40" fill="none">
+        <ellipse cx="20" cy="15" rx="13" ry="8" fill="#334155" opacity="0.95"/>
+        <ellipse cx="12" cy="16" rx="8" ry="5.5" fill="#334155"/>
+        {[11,17,23,29].map((x,i) => (
+          <line key={i} x1={x} y1="24" x2={x-4} y2="35"
+            stroke="#2563eb" strokeWidth="2.5" strokeLinecap="round" opacity="0.9"/>
+        ))}
+      </svg>
+    ),
+    'Thunderstorm': (
+      <svg width={s} height={s} viewBox="0 0 40 40" fill="none">
+        <ellipse cx="20" cy="14" rx="13" ry="8" fill="#1e293b" opacity="0.95"/>
+        <ellipse cx="12" cy="15" rx="8" ry="5.5" fill="#1e293b"/>
+        {[11,27].map((x,i) => (
+          <line key={i} x1={x} y1="23" x2={x-3} y2="31"
+            stroke="#2563eb" strokeWidth="2" strokeLinecap="round" opacity="0.7"/>
+        ))}
+        <path d="M22 20 L17 29 L21 29 L18 38 L26 26 L22 26 Z"
+          fill="#fbbf24" opacity="0.95"/>
+      </svg>
+    ),
+    'Very Cold': (
+      <svg width={s} height={s} viewBox="0 0 40 40" fill="none">
+        <line x1="20" y1="6" x2="20" y2="34" stroke="#93c5fd" strokeWidth="2.5" strokeLinecap="round"/>
+        <line x1="6" y1="20" x2="34" y2="20" stroke="#93c5fd" strokeWidth="2.5" strokeLinecap="round"/>
+        <line x1="10" y1="10" x2="30" y2="30" stroke="#93c5fd" strokeWidth="2.5" strokeLinecap="round"/>
+        <line x1="30" y1="10" x2="10" y2="30" stroke="#93c5fd" strokeWidth="2.5" strokeLinecap="round"/>
+        <circle cx="20" cy="20" r="3.5" fill="#bfdbfe"/>
+        {[0,45,90,135,180,225,270,315].map(deg => {
+          const r = deg * Math.PI / 180, d = 9;
+          return <circle key={deg} cx={20+d*Math.cos(r)} cy={20+d*Math.sin(r)} r="1.5" fill="#93c5fd"/>;
+        })}
+      </svg>
+    ),
+    'Cold': (
+      <svg width={s} height={s} viewBox="0 0 40 40" fill="none">
+        <ellipse cx="20" cy="18" rx="11" ry="7" fill="#64748b" opacity="0.8"/>
+        {[13,20,27].map((x,i) => (
+          <g key={i}>
+            <line x1={x} y1="27" x2={x} y2="33" stroke="#bfdbfe" strokeWidth="2" strokeLinecap="round"/>
+            <circle cx={x} cy="35" r="2" fill="#bfdbfe" opacity="0.8"/>
+          </g>
+        ))}
+      </svg>
+    ),
+    'Cool': (
+      <svg width={s} height={s} viewBox="0 0 40 40" fill="none">
+        <circle cx="15" cy="17" r="6.5" fill="#fbbf24" opacity="0.8"/>
+        <ellipse cx="24" cy="24" rx="10" ry="6.5" fill="#93c5fd" opacity="0.7"/>
+        <ellipse cx="18" cy="25" rx="7.5" ry="5" fill="#bfdbfe" opacity="0.7"/>
+      </svg>
+    ),
+    'Very Hot': (
+      <svg width={s} height={s} viewBox="0 0 40 40" fill="none">
+        <circle cx="20" cy="20" r="10" fill="#f97316" opacity="0.95"/>
+        {[0,45,90,135,180,225,270,315].map(deg => {
+          const r = deg * Math.PI / 180;
+          return <line key={deg}
+            x1={20+13*Math.cos(r)} y1={20+13*Math.sin(r)}
+            x2={20+18*Math.cos(r)} y2={20+18*Math.sin(r)}
+            stroke="#f97316" strokeWidth="3" strokeLinecap="round"/>;
+        })}
+        <circle cx="20" cy="20" r="6" fill="#fbbf24" opacity="0.6"/>
+      </svg>
+    ),
+  };
+  return icons[condition] ?? icons['Partly Cloudy'];
+};
+
+// ── Floating weather card — top-left of map ──────────────────
+const WeatherFloatCard = ({ weather, plantName, theme }) => {
   if (!weather) return null;
   const dk = theme === 'dark';
   const sub = dk ? 'text-slate-400' : 'text-slate-500';
   const tempColor = weather.temp > 35 ? 'text-orange-400' : weather.temp < 20 ? 'text-blue-400' : 'text-green-400';
 
   return (
-    <div className={`rounded-xl border px-4 py-3 mb-3 ${dk ? 'bg-slate-900/60 border-slate-600' : 'bg-slate-50 border-slate-200'}`}>
-      <p className={`text-sm font-black uppercase tracking-widest mb-2.5 ${sub}`}
-         style={{ fontSize: '11px', letterSpacing: '0.12em' }}>
-        ☁ Live Weather
-      </p>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
-        <div className="flex items-center gap-2">
-          <Thermometer className={`w-4 h-4 flex-shrink-0 ${tempColor}`} />
-          <div>
-            <span className={`font-bold ${tempColor}`} style={{ fontSize: '14px' }}>{weather.temp}°C</span>
-            <span className={`ml-1 text-xs ${sub}`}>temp</span>
-          </div>
+    <div className={`absolute top-3 left-3 z-10 rounded-2xl border shadow-2xl px-5 py-4 min-w-[230px]
+      backdrop-blur-md transition-all duration-300
+      ${dk ? 'bg-slate-900/88 border-slate-600/60' : 'bg-white/92 border-slate-200'}`}>
+      <div className="flex items-center gap-3.5 mb-3">
+        <div className="flex-shrink-0 drop-shadow-lg">
+          <WeatherIcon condition={weather.condition} size={52} />
         </div>
-        <div className="flex items-center gap-2">
-          <Droplets className="w-4 h-4 flex-shrink-0 text-blue-400" />
-          <div>
-            <span className="font-bold text-blue-400" style={{ fontSize: '14px' }}>{weather.humidity}%</span>
-            <span className={`ml-1 text-xs ${sub}`}>humid</span>
-          </div>
+        <div>
+          <p className={`text-base font-bold leading-tight ${dk ? 'text-white' : 'text-slate-800'}`}>
+            {weather.condition}
+          </p>
+          <p className={`text-xs font-semibold mt-0.5 ${sub}`}>{plantName ?? 'Fleet'}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Wind className="w-4 h-4 flex-shrink-0 text-cyan-400" />
-          <div>
-            <span className="font-bold text-cyan-400" style={{ fontSize: '14px' }}>{weather.windSpeed}</span>
-            <span className={`ml-1 text-xs ${sub}`}>km/h</span>
-          </div>
+      </div>
+      <div className="grid grid-cols-3 gap-2 pt-2.5 border-t border-slate-700/40">
+        <div className="flex flex-col items-center gap-1">
+          <Thermometer className={`w-4 h-4 ${tempColor}`} />
+          <span className={`text-sm font-bold ${tempColor}`}>{weather.temp}°C</span>
+          <span className={`text-[9px] ${sub}`}>temp</span>
         </div>
-        <div className="flex items-center gap-2">
-          <Zap className="w-4 h-4 flex-shrink-0 text-yellow-400" />
-          <span className={`text-xs font-semibold text-yellow-400 truncate`}>{weather.condition}</span>
+        <div className="flex flex-col items-center gap-1">
+          <Droplets className="w-4 h-4 text-blue-400" />
+          <span className="text-sm font-bold text-blue-400">{weather.humidity}%</span>
+          <span className={`text-[9px] ${sub}`}>humid</span>
+        </div>
+        <div className="flex flex-col items-center gap-1">
+          <Wind className="w-4 h-4 text-cyan-400" />
+          <span className="text-sm font-bold text-cyan-400">{weather.windSpeed}</span>
+          <span className={`text-[9px] ${sub}`}>km/h</span>
         </div>
       </div>
       {weather.isFallback && (
-        <p className={`text-[9px] mt-1.5 ${sub} opacity-50`}>* estimated data</p>
+        <p className={`text-[8px] mt-1.5 text-center ${sub} opacity-40`}>* estimated</p>
       )}
     </div>
   );
 };
 
-// ── Build the full Leaflet HTML — now accepts weatherMap + powerMap ─────
+// ── Build the full Leaflet HTML ─────────────────────────────
 const buildMapHTML = (isDark, weatherMap = {}, powerMap = {}) => {
   const plantsJson = JSON.stringify(PLANTS.map(p => ({
     id: p.id, name: p.name, lat: p.lat, lng: p.lng,
     status: p.status,
     power: powerMap[p.id] ?? p.power,
     pr: p.pr,
-    chipPos: p.chipPos ?? 'above',
+    type: p.type ?? 'solar',
     weather: weatherMap[p.id] || null,
   })));
 
@@ -178,40 +314,27 @@ const buildMapHTML = (isDark, weatherMap = {}, powerMap = {}) => {
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
-  html, body, #map { width:100%; height:100%; }
+  html, body, #map { width:100%; height:100%; background: ${isDark ? '#0f172a' : '#f8fafc'}; }
+  .leaflet-container { background: ${isDark ? '#0f172a' : '#f0f4f8'} !important; }
+  .leaflet-tile-pane { background: ${isDark ? '#0f172a' : '#f0f4f8'}; }
   .plant-marker {
     display:flex; align-items:center; justify-content:center;
     border-radius:50%; border:2.5px solid; cursor:pointer;
     box-shadow:0 0 10px rgba(0,0,0,0.4);
     transition: transform 0.15s;
+    position:relative;
+    z-index:2;
   }
   .plant-marker:hover { transform: scale(1.2); }
-  .plant-label {
-    background: transparent;
-    color:${isDark?'#ffffff':'#1e293b'};
-    font-size:11px; font-weight:800;
-    white-space:nowrap; pointer-events:none;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.8), 1px 1px 0 rgba(0,0,0,1);
-    letter-spacing:0.3px;
+  .plant-marker.selected {
+    box-shadow: 0 0 0 4px rgba(255,255,255,0.9), 0 0 0 7px rgba(255,255,255,0.3), 0 0 20px rgba(255,255,255,0.5) !important;
+    border-width: 3px !important;
   }
   .leaflet-control-attribution { font-size:8px !important; }
-
-  /* Weather chip animations */
-  @keyframes chipFadeIn {
-    from { opacity: 0; transform: translateX(-50%) translateY(-4px); }
-    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
-  }
-  .weather-chip {
-    animation: chipFadeIn 0.4s ease forwards;
-  }
   @keyframes ping {
     0%   { transform:scale(1);   opacity:0.25; }
     70%  { transform:scale(1.8); opacity:0;    }
     100% { transform:scale(1.8); opacity:0;    }
-  }
-  .plant-marker.selected {
-    box-shadow: 0 0 0 4px rgba(255,255,255,0.9), 0 0 0 7px rgba(255,255,255,0.3), 0 0 20px rgba(255,255,255,0.5) !important;
-    border-width: 3px !important;
   }
 </style>
 </head>
@@ -221,11 +344,7 @@ const buildMapHTML = (isDark, weatherMap = {}, powerMap = {}) => {
 const plants = ${plantsJson};
 const isDark = ${isDark};
 
-const map = L.map('map', {
-  zoomControl: true,
-  scrollWheelZoom: true,
-});
-
+const map = L.map('map', { zoomControl: false, scrollWheelZoom: true });
 const bounds = L.latLngBounds(plants.map(p => [p.lat, p.lng]));
 map.fitBounds(bounds, { padding: [60, 60] });
 
@@ -246,248 +365,194 @@ const statusColor = (s) =>
 
 const markerMap = {};
 
-plants.forEach(p => {
-  const col = statusColor(p.status);
+// ── Build chip inner HTML ────────────────────────────────────
+function buildChipsInner(plant) {
+  const pCol = plant.status === 'warning' ? '#f59e0b' : '#facc15';
+  const pKw  = Math.round(plant.power);
+  const bg   = isDark ? 'rgba(2,6,23,0.92)' : 'rgba(10,18,38,0.86)';
 
-  // ── Weather chip HTML ──────────────────────────────────────
-  let tempChip = '';
-  let powerChip = '';
-
-  if (p.weather) {
-    const temp = p.weather.temp;
+  let inner = '';
+  if (plant.weather) {
+    const temp    = plant.weather.temp;
     const tempCol = temp > 35 ? '#f97316' : temp < 20 ? '#60a5fa' : '#22c55e';
-    tempChip = \`
-      <div class="weather-chip" style="
-        position:absolute;
-        bottom:calc(100% + 6px);
-        left:50%;
-        transform:translateX(-50%);
-        display:flex;
-        align-items:center;
-        gap:2px;
-        background:\${isDark ? 'rgba(2,6,23,0.85)' : 'rgba(15,23,42,0.80)'};
-        border:1px solid \${tempCol}55;
-        border-radius:5px;
-        padding:2px 5px;
-        font-size:9px;
-        font-weight:700;
-        white-space:nowrap;
-        pointer-events:none;
-        backdrop-filter:blur(4px);
-        box-shadow:0 2px 6px rgba(0,0,0,0.4);
-      ">
-        <svg width="8" height="8" viewBox="0 0 24 24" fill="none">
+    inner = \`
+      <div style="display:flex;align-items:center;gap:4px;
+        background:\${bg};border:1.5px solid \${tempCol}80;
+        border-radius:8px;padding:4px 9px;
+        font-size:11px;font-weight:800;white-space:nowrap;
+        box-shadow:0 2px 8px rgba(0,0,0,0.5);backdrop-filter:blur(6px);">
+        <svg width="9" height="9" viewBox="0 0 24 24">
           <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"
-            stroke="\${tempCol}" stroke-width="2" fill="none"/>
+            stroke="\${tempCol}" stroke-width="2.5" fill="none"/>
         </svg>
-        <span style="color:\${tempCol};">\${temp}°C</span>
+        <span style="color:\${tempCol}">\${temp}°C</span>
       </div>
-    \`;
-  }
-
-  const powerKw = Math.round(p.power);
-  const powerCol = p.status === 'warning' ? '#f59e0b' : '#facc15';
-  powerChip = \`
-    <div class="weather-chip" style="
-      position:absolute;
-      bottom:calc(100% + 6px);
-      left:50%;
-      transform:translateX(calc(-50% + \${p.weather ? '28px' : '0px'}));
-      display:flex;
-      align-items:center;
-      gap:2px;
-      background:\${isDark ? 'rgba(2,6,23,0.85)' : 'rgba(15,23,42,0.80)'};
-      border:1px solid \${powerCol}55;
-      border-radius:5px;
-      padding:2px 5px;
-      font-size:9px;
-      font-weight:700;
-      white-space:nowrap;
-      pointer-events:none;
-      backdrop-filter:blur(4px);
-      box-shadow:0 2px 6px rgba(0,0,0,0.4);
-    ">
-      <svg width="8" height="8" viewBox="0 0 24 24" fill="none">
-        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"
-          stroke="\${powerCol}" stroke-width="2" fill="\${powerCol}" opacity="0.8"/>
-      </svg>
-      <span style="color:\${powerCol};">\${powerKw}kW</span>
-    </div>
-  \`;
-
-  // ── If weather exists, show both chips in a row ────────────
-  let chipsHtml = '';
-  const isBelow = p.chipPos === 'below';
-  const chipPosStyle = isBelow
-    ? 'top:calc(100% + 8px); bottom:auto;'
-    : 'bottom:calc(100% + 8px); top:auto;';
-
-  if (p.weather) {
-    const temp = p.weather.temp;
-    const tempCol = temp > 35 ? '#f97316' : temp < 20 ? '#60a5fa' : '#22c55e';
-    chipsHtml = \`
-      <div data-chip-wrapper class="weather-chip" style="
-        position:absolute;
-        \${chipPosStyle}
-        left:50%;
-        transform:translateX(-50%);
-        display:flex;
-        align-items:center;
-        gap:4px;
-        pointer-events:none;
-      ">
-        <div style="
-          display:flex;align-items:center;gap:3px;
-          background:\${isDark?'rgba(2,6,23,0.88)':'rgba(10,18,38,0.82)'};
-          border:1px solid \${tempCol}60;
-          border-radius:6px;padding:3px 7px;
-          font-size:13px;font-weight:700;white-space:nowrap;
-          box-shadow:0 2px 8px rgba(0,0,0,0.5);
-          backdrop-filter:blur(6px);
-        ">
-          <svg width="10" height="10" viewBox="0 0 24 24">
-            <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"
-              stroke="\${tempCol}" stroke-width="2.5" fill="none"/>
-          </svg>
-          <span style="color:\${tempCol}">\${temp}°C</span>
-        </div>
-        <div style="
-          display:flex;align-items:center;gap:3px;
-          background:\${isDark?'rgba(2,6,23,0.88)':'rgba(10,18,38,0.82)'};
-          border:1px solid #facc1560;
-          border-radius:6px;padding:3px 7px;
-          font-size:13px;font-weight:700;white-space:nowrap;
-          box-shadow:0 2px 8px rgba(0,0,0,0.5);
-          backdrop-filter:blur(6px);
-        ">
-          <svg width="10" height="10" viewBox="0 0 24 24">
-            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"
-              stroke="#facc15" stroke-width="2" fill="#facc15" opacity="0.85"/>
-          </svg>
-          <span style="color:#facc15">\${Math.round(p.power)}kW</span>
-        </div>
+      <div style="display:flex;align-items:center;gap:4px;
+        background:\${bg};border:1.5px solid \${pCol}80;
+        border-radius:8px;padding:4px 9px;
+        font-size:11px;font-weight:800;white-space:nowrap;
+        box-shadow:0 2px 8px rgba(0,0,0,0.5);backdrop-filter:blur(6px);">
+        <svg width="9" height="9" viewBox="0 0 24 24">
+          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"
+            stroke="\${pCol}" stroke-width="2" fill="\${pCol}" opacity="0.9"/>
+        </svg>
+        <span style="color:\${pCol}">\${pKw}kW</span>
       </div>
     \`;
   } else {
-    // No weather yet — show power chip only
-    const powerKwFallback = Math.round(p.power);
-    const pCol = p.status === 'warning' ? '#f59e0b' : '#facc15';
-    chipsHtml = \`
-      <div data-chip-wrapper class="weather-chip" style="
-        position:absolute;\${chipPosStyle}left:50%;
-        transform:translateX(-50%);pointer-events:none;
-      ">
-        <div style="
-          display:flex;align-items:center;gap:3px;
-          background:rgba(2,6,23,0.85);
-          border:1px solid \${pCol}60;
-          border-radius:6px;padding:3px 7px;
-          font-size:13px;font-weight:700;white-space:nowrap;
-          box-shadow:0 2px 8px rgba(0,0,0,0.5);
-        ">
-          <svg width="10" height="10" viewBox="0 0 24 24">
-            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"
-              stroke="\${pCol}" stroke-width="2" fill="\${pCol}" opacity="0.85"/>
-          </svg>
-          <span style="color:\${pCol}">\${powerKwFallback}kW</span>
-        </div>
+    inner = \`
+      <div style="display:flex;align-items:center;gap:4px;
+        background:\${bg};border:1.5px solid \${pCol}80;
+        border-radius:8px;padding:4px 9px;
+        font-size:11px;font-weight:800;white-space:nowrap;
+        box-shadow:0 2px 8px rgba(0,0,0,0.5);">
+        <svg width="9" height="9" viewBox="0 0 24 24">
+          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"
+            stroke="\${pCol}" stroke-width="2" fill="\${pCol}" opacity="0.9"/>
+        </svg>
+        <span style="color:\${pCol}">\${pKw}kW</span>
       </div>
     \`;
   }
+  return inner;
+}
 
+// ── Build type icon SVG ──────────────────────────────────────
+function buildTypeIcon(type) {
+  if (type === 'biomass') {
+    return \`<svg viewBox="0 0 24 24" width="19" height="19" fill="none">
+      <rect x="3" y="13" width="18" height="8" fill="white" opacity="0.95" rx="1"/>
+      <rect x="5" y="6" width="4.5" height="8" fill="white" opacity="0.9" rx="0.5"/>
+      <rect x="14.5" y="9" width="4" height="5" fill="white" opacity="0.9" rx="0.5"/>
+      <circle cx="7.2" cy="4.5" r="1.3" fill="white" opacity="0.65"/>
+      <circle cx="9.5" cy="3.2" r="1" fill="white" opacity="0.45"/>
+      <circle cx="16.5" cy="7.5" r="1.1" fill="white" opacity="0.6"/>
+      <rect x="10" y="15.5" width="4" height="4.5" fill="rgba(0,0,0,0.25)" rx="0.5"/>
+    </svg>\`;
+  }
+  return \`<svg viewBox="0 0 24 24" width="19" height="19" fill="none">
+    <path d="M2 17 L8 6 L22 8 L16 19 Z" fill="white" opacity="0.95"/>
+    <line x1="3.5" y1="12.3" x2="19.5" y2="14" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
+    <line x1="9.8" y1="6.6" x2="7.5" y2="18.3" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
+    <line x1="15.8" y1="7.3" x2="13.5" y2="19" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
+    <line x1="12" y1="19" x2="12" y2="22" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="9.5" y1="22" x2="14.5" y2="22" stroke="white" stroke-width="2" stroke-linecap="round"/>
+  </svg>\`;
+}
+
+// ── Build single unified marker HTML ────────────────────────
+//  Layout (one block, no separate label marker):
+//    [  Plant Name  ]   ← name row on TOP
+//    [●] [chip] [chip]  ← circle + chips row
+//
+function buildMarkerHtml(p) {
+  const col      = statusColor(p.status);
+  const nameCol  = isDark ? '#ffffff' : '#ffffff';
+  const chipsInner = buildChipsInner(p);
+  const typeIcon   = buildTypeIcon(p.type);
+  const pingHtml   = p.status === 'online'
+    ? \`<div style="position:absolute;inset:0;border-radius:50%;background:\${col};opacity:0.2;animation:ping 1.5s infinite;pointer-events:none;z-index:1;"></div>\`
+    : '';
+
+  return \`
+    <div style="
+      display:inline-flex;
+      flex-direction:column;
+      align-items:flex-start;
+      pointer-events:none;
+      gap:0px;
+    ">
+      <!-- ① Plant name label — always on top -->
+      <div style="
+        font-size:11px;
+        font-weight:7F00;
+        white-space:nowrap;
+        color:\${nameCol};
+        text-shadow:0 1px 4px rgba(0,0,0,0.95), 0 0 8px rgba(0,0,0,0.85), 1px 1px 0 rgba(0,0,0,1);
+        letter-spacing:0.4px;
+        margin-bottom:1px;
+        padding-left:1px;
+        line-height:1;
+        pointer-events:none;
+      ">\${p.name}</div>
+
+      <!-- ② Circle marker + chips — same row -->
+      <div style="display:flex;align-items:center;gap:7px;pointer-events:auto;">
+
+        <!-- Circle -->
+        <div style="position:relative;width:36px;height:36px;flex-shrink:0;">
+          \${pingHtml}
+          <div
+            class="plant-marker"
+            data-plant-id="\${p.id}"
+            data-plant-type="\${p.type}"
+            style="
+              width:40px;height:40px;
+              background:radial-gradient(circle at 35% 35%, \${col}ee, \${col}66);
+              border-color:\${col};
+            "
+          >
+            \${typeIcon}
+          </div>
+        </div>
+
+        <!-- Chips column -->
+        <div data-chip-wrapper style="
+          display:flex;
+          flex-direction:column;
+          gap:5px;
+          pointer-events:none;
+          transition:opacity 0.25s ease;
+        ">
+          \${chipsInner}
+        </div>
+
+      </div>
+    </div>
+  \`;
+}
+
+// LABEL_H: approx height of the name row (font 11px + margin-bottom 4px)
+const LABEL_H = 19;
+
+plants.forEach(p => {
   const svgIcon = L.divIcon({
     className: '',
-    html: \`
-      <div style="position:relative;width:36px;height:36px;">
-        \${chipsHtml}
-        \${p.status==='online'?
-          \`<div style="position:absolute;top:0;left:0;width:36px;height:36px;border-radius:50%;
-            background:\${col};opacity:0.2;animation:ping 1.5s infinite;"></div>\`:''}
-        <div class="plant-marker" style="
-          width:36px;height:36px;
-          background:radial-gradient(circle at 35% 35%, \${col}ee, \${col}66);
-          border-color:\${col};">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none">
-            <circle cx="12" cy="12" r="4" fill="white"/>
-            \${[0,45,90,135,180,225,270,315].map(deg=>{
-              const r=Math.PI*deg/180;
-              return \`<line x1="\${12+6*Math.cos(r)}" y1="\${12+6*Math.sin(r)}"
-                x2="\${12+9*Math.cos(r)}" y2="\${12+9*Math.sin(r)}"
-                stroke="white" stroke-width="1.5"/>\`;
-            }).join('')}
-          </svg>
-        </div>
-      </div>
-    \`,
-    iconSize:   [36, 36],
-    iconAnchor: [18, 18],
-  });
-
-  const labelIcon = L.divIcon({
-    className: '',
-    html: \`<div class="plant-label">\${p.name}</div>\`,
-    iconAnchor: [-26, 8],
+    html: buildMarkerHtml(p),
+    // iconSize covers only the circle; label + chips overflow visually but don't affect hit-testing
+    iconSize:   [36, LABEL_H + 36],
+    // anchor at circle center: x=18 (circle mid), y=LABEL_H+18 (past label + half circle)
+    iconAnchor: [18, LABEL_H + 18],
   });
 
   const marker = L.marker([p.lat, p.lng], { icon: svgIcon }).addTo(map);
   markerMap[p.id] = marker;
-  L.marker([p.lat, p.lng], { icon: labelIcon, interactive: false }).addTo(map);
 
   marker.on('click', () => {
     window.parent.postMessage({ type:'plant-click', id: p.id }, '*');
   });
 });
 
-const style = document.createElement('style');
-style.textContent = \`
-  @keyframes ping {
-    0%   { transform:scale(1);   opacity:0.25; }
-    70%  { transform:scale(1.8); opacity:0;    }
-    100% { transform:scale(1.8); opacity:0;    }
-  }
-  .plant-marker.selected {
-    box-shadow: 0 0 0 4px rgba(255,255,255,0.9), 0 0 0 7px rgba(255,255,255,0.3), 0 0 20px rgba(255,255,255,0.5) !important;
-    border-width: 3px !important;
-  }
-  /* Zoom-gated chips */
-  .weather-chip {
-    transition: opacity 0.25s ease;
-  }
-  .chips-hidden .weather-chip,
-  .chips-hidden[data-chip-wrapper] {
-    opacity: 0 !important;
-    pointer-events: none !important;
-  }
-\`;
-document.head.appendChild(style);
-
 // ── Zoom-based chip visibility ─────────────────────────────
-const CHIP_SHOW_ZOOM = 8; // show chips only when zoom >= 8
+const CHIP_SHOW_ZOOM = 8;
 
 const updateChipVisibility = () => {
   const z = map.getZoom();
   document.querySelectorAll('[data-chip-wrapper]').forEach(el => {
-    if (z >= CHIP_SHOW_ZOOM) {
-      el.style.opacity = '1';
-      el.style.pointerEvents = 'none';
-    } else {
-      el.style.opacity = '0';
-      el.style.pointerEvents = 'none';
-    }
+    el.style.opacity       = z >= CHIP_SHOW_ZOOM ? '1' : '0';
+    el.style.pointerEvents = 'none';
   });
 };
 
 map.on('zoomend', updateChipVisibility);
 map.on('zoomstart', () => {
-  // instantly hide on zoom start to reduce clutter during animation
   document.querySelectorAll('[data-chip-wrapper]').forEach(el => {
     el.style.opacity = '0';
   });
 });
-
-// run once after map is ready
 map.whenReady(() => setTimeout(updateChipVisibility, 300));
 
+// ── Message listener ────────────────────────────────────────
 window.addEventListener('message', (e) => {
   if (!e.data) return;
 
@@ -496,8 +561,21 @@ window.addEventListener('message', (e) => {
   }
 
   if (e.data.type === 'zoom-reset') {
-    const bounds = L.latLngBounds(plants.map(p => [p.lat, p.lng]));
-    map.flyToBounds(bounds, { padding: [60, 60], duration: 1.2 });
+    const b = L.latLngBounds(plants.map(p => [p.lat, p.lng]));
+    map.flyToBounds(b, { padding: [60, 60], duration: 1.2 });
+  }
+
+  if (e.data.type === 'filter-type') {
+    const ft = e.data.filterType;
+    plants.forEach(p => {
+      const m  = markerMap[p.id];
+      if (!m) return;
+      const el = m.getElement();
+      if (!el) return;
+      const show = ft === 'all' || p.type === ft;
+      el.style.opacity       = show ? '1'    : '0.15';
+      el.style.pointerEvents = show ? 'auto' : 'none';
+    });
   }
 
   if (e.data.type === 'highlight') {
@@ -505,12 +583,28 @@ window.addEventListener('message', (e) => {
       if (!m) return;
       const el = m.getElement()?.querySelector('.plant-marker');
       if (!el) return;
-      if (id === e.data.id) {
-        el.classList.add('selected');
-      } else {
-        el.classList.remove('selected');
-      }
+      id === e.data.id ? el.classList.add('selected') : el.classList.remove('selected');
     });
+  }
+
+  if (e.data.type === 'update-chips') {
+    const plant = plants.find(p => p.id === e.data.id);
+    if (!plant) return;
+    plant.power   = e.data.power;
+    plant.weather = e.data.weather;
+
+    const marker = markerMap[e.data.id];
+    if (!marker) return;
+    const markerEl = marker.getElement();
+    if (!markerEl) return;
+
+    const wrapper = markerEl.querySelector('[data-chip-wrapper]');
+    if (!wrapper) return;
+
+    wrapper.innerHTML = buildChipsInner(plant);
+
+    const z = map.getZoom();
+    wrapper.style.opacity = z >= CHIP_SHOW_ZOOM ? '1' : '0';
   }
 });
 </script>
@@ -529,14 +623,12 @@ const FleetOverviewPage = ({ theme, onEnterDashboard }) => {
     borderRadius: 8, fontSize: 10,
   };
 
-  // ── Reactive clock ──────────────────────────────────────────
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(t);
   }, []);
 
-  // ── Weather data per plant ──────────────────────────────────
   const [plantWeather, setPlantWeather] = useState({});
   const [weatherLoading, setWeatherLoading] = useState(true);
 
@@ -550,9 +642,7 @@ const FleetOverviewPage = ({ theme, onEnterDashboard }) => {
     ).then(results => {
       const map = {};
       results.forEach(r => {
-        if (r.status === 'fulfilled') {
-          map[r.value.id] = r.value.data;
-        }
+        if (r.status === 'fulfilled') map[r.value.id] = r.value.data;
       });
       setPlantWeather(map);
       setWeatherLoading(false);
@@ -572,7 +662,6 @@ const FleetOverviewPage = ({ theme, onEnterDashboard }) => {
     return Math.round(getHourlyKwh(dailyYield, h) * (m || 1));
   };
 
-  // Instantaneous irradiance W/m² — realistic sine curve, peak ~950 W/m² at solar noon
   const getCurrentIrradiance = (curFrac) => {
     if (curFrac < 6 || curFrac > 18) return 0;
     const peakWm2 = 950;
@@ -584,7 +673,7 @@ const FleetOverviewPage = ({ theme, onEnterDashboard }) => {
     const dayYield   = getDailyYield(p.id, now);
     const toNow      = getYieldToNow(dayYield, curFrac);
     const powerNow   = getCurrentPower(dayYield, curFrac);
-    const irradiance = getCurrentIrradiance(curFrac); // W/m² real-time
+    const irradiance = getCurrentIrradiance(curFrac);
     const revenue    = Math.round(toNow * RATE_PER_KWH);
     const monthly = Array.from({ length: DAYS_TOTAL }, (_, i) => {
       const d = new Date(now.getFullYear(), now.getMonth(), i + 1);
@@ -610,11 +699,12 @@ const FleetOverviewPage = ({ theme, onEnterDashboard }) => {
   const totalYield   = plantData.reduce((s, p) => s + p.toNow,   0);
   const totalRevenue = plantData.reduce((s, p) => s + p.revenue,  0);
 
-  const [selected, setSelected] = useState(null);
+  const [selected, setSelected]     = useState(null);
+  const [filterType, setFilterType] = useState('all');
   const [showPRFormula, setShowPRFormula] = useState(false);
-  const activePlant = plantData.find(p => p.id === selected) ?? null;
+  const activePlant   = plantData.find(p => p.id === selected) ?? null;
   const activeWeather = selected ? plantWeather[selected] : null;
-  const mapRef = useRef(null);
+  const mapRef        = useRef(null);
 
   const selectPlant = (id) => {
     setSelected(prev => {
@@ -627,6 +717,7 @@ const FleetOverviewPage = ({ theme, onEnterDashboard }) => {
           if (plant) win.postMessage({ type: 'zoom-plant', lat: plant.lat, lng: plant.lng, id: newId }, '*');
         } else {
           win.postMessage({ type: 'zoom-reset' }, '*');
+          win.postMessage({ type: 'filter-type', filterType }, '*');
         }
         win.postMessage({ type: 'highlight', id: newId }, '*');
       }, 50);
@@ -634,21 +725,38 @@ const FleetOverviewPage = ({ theme, onEnterDashboard }) => {
     });
   };
 
+  const handleFilter = (ft) => {
+    setFilterType(ft);
+    const win = mapRef.current?.contentWindow;
+    if (win) win.postMessage({ type: 'filter-type', filterType: ft }, '*');
+  };
+
   useEffect(() => {
     const handler = (e) => {
-      if (e.data?.type === 'plant-click') {
-        selectPlant(e.data.id);
-      }
+      if (e.data?.type === 'plant-click') selectPlant(e.data.id);
     };
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Rebuild map when theme or weather data arrives
-  const weatherDataReady = Object.keys(plantWeather).length;
   const powerMap = Object.fromEntries(plantData.map(p => [p.id, p.power]));
-  const mapHTML = buildMapHTML(dk, plantWeather, powerMap);
+  const mapHTML  = buildMapHTML(dk, plantWeather, powerMap);
+
+  useEffect(() => {
+    if (!mapRef.current?.contentWindow) return;
+    if (Object.keys(plantWeather).length === 0) return;
+    const win = mapRef.current.contentWindow;
+    PLANTS.forEach(p => {
+      win.postMessage({
+        type: 'update-chips',
+        id: p.id,
+        power: powerMap[p.id] ?? p.power,
+        weather: plantWeather[p.id] || null,
+      }, '*');
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plantWeather, JSON.stringify(powerMap)]);
 
   const yieldBarData = Array.from({ length: DAYS_TOTAL }, (_, i) => {
     const src = activePlant ? [activePlant] : plantData;
@@ -679,9 +787,9 @@ const FleetOverviewPage = ({ theme, onEnterDashboard }) => {
               {fmt(activePlant ? activePlant.power: totalPower)} kW
             </p>
             <p className={`text-[9px] ${sub} -mt-1 mb-1`}>
-              Yield to now: {(activePlant ? activePlant.toNow : totalYield).toLocaleString()} kWh
+              {/* Yield to now: {(activePlant ? activePlant.toNow : totalYield).toLocaleString()} kWh */}
             </p>
-            <ResponsiveContainer width="100%" height={90}>
+            <ResponsiveContainer width="100%" height={100}>
               <AreaChart data={activePlant ? activePlant.powerHourly : plantData.reduce((acc, p) => acc.map((d,i) => ({ h: d.h, kw: (d.kw??0) + (p.powerHourly[i].kw ?? 0) })), plantData[0].powerHourly.map(d=>({...d})))} margin={{ top:2, right:2, left:-28, bottom:0 }}>
                 <defs>
                   <linearGradient id="pwG" x1="0" y1="0" x2="0" y2="1">
@@ -699,24 +807,27 @@ const FleetOverviewPage = ({ theme, onEnterDashboard }) => {
 
           {(() => {
             const p = activePlant;
-            const yieldVal   = p ? p.toNow       : totalYield;
+            const yieldVal   = p ? p.toNow     : totalYield;
             const revVal     = p ? p.revenue   : totalRevenue;
-            const revMax     = p ? p.capacity * 4 * 3 : totalCapacity * 4 * 3;
-            const prVal      = p ? p.pr                : PLANTS.reduce((s,x)=>s+x.pr,0)/PLANTS.length;
-            const capLabel   = p ? `${p.capacity} kWp` : `${totalCapacity} kWp`;
+            // const revMax     = p ? p.capacity * 4 * 3 : totalCapacity * 4 * 3;
+            const prVal      = p ? p.pr        : PLANTS.reduce((s,x)=>s+x.pr,0)/PLANTS.length;
+            // const capLabel   = p ? `${p.capacity} kWp` : `${totalCapacity} kWp`;
             return [
               {
                 label: 'Yield Today',   col: 'text-yellow-400',
                 bdr: dk ? 'border-yellow-700/30' : 'border-yellow-200',
                 value: `${yieldVal.toLocaleString()} kWh`,
-                sub2: p ? capLabel : `${PLANTS.length} sites combined`,
+                // target: ` / ${(16400).toLocaleString()} kWh`,
+                // sub2: p ? capLabel : `${PLANTS.length} sites combined`,
+                gv: yieldVal, gmin: 0, gmax: 16470,
               },
               {
                 label: 'Revenue Today', col: 'text-green-400',
                 bdr: dk ? 'border-green-700/30' : 'border-green-200',
                 value: `฿${revVal.toLocaleString()}`,
+                target: ` / ฿${(5.66 * 16470).toLocaleString()}`,
                 sub2: `฿${RATE_PER_KWH} / kWh`,
-                gv: revVal, gmin: 0, gmax: revMax,
+                gv: revVal, gmin: 0, gmax: 5.66 * 16470,
               },
               {
                 label: 'Performance Ratio', col: 'text-blue-400',
@@ -810,29 +921,85 @@ const FleetOverviewPage = ({ theme, onEnterDashboard }) => {
         </div>
 
         {/* CENTER: Leaflet iframe ─────────────────────────── */}
-        <div className="flex-1 relative overflow-hidden">
-          {/* Weather loading indicator */}
+        <div className={`flex-1 relative overflow-hidden ${dk ? 'bg-slate-950' : 'bg-slate-100'}`}>
+
+          {activePlant && activeWeather && (
+            <WeatherFloatCard
+              weather={activeWeather}
+              plantName={activePlant.name}
+              theme={theme}
+            />
+          )}
+
+          <button
+            onClick={() => {
+              const el = document.documentElement;
+              if (!document.fullscreenElement) el.requestFullscreen?.();
+              else document.exitFullscreen?.();
+            }}
+            title="Toggle fullscreen"
+            className={`absolute bottom-10 right-3 z-10 w-8 h-8 flex items-center justify-center
+              rounded-lg border shadow-lg transition hover:scale-110 active:scale-95 ${
+              dk
+                ? 'bg-slate-800/90 border-slate-600 text-slate-300 hover:bg-slate-700'
+                : 'bg-white/90 border-slate-300 text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+            </svg>
+          </button>
+
           {weatherLoading && (
-            <div className={`absolute top-3 left-3 z-10 flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-medium border ${
-              dk ? 'bg-slate-800/90 border-slate-700 text-slate-400' : 'bg-white/90 border-slate-200 text-slate-500'
+            <div className={`absolute top-3 left-3 z-10 flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-medium border backdrop-blur-md ${
+              dk ? 'bg-slate-900/80 border-slate-600/60 text-slate-400' : 'bg-white/90 border-slate-200 text-slate-500'
             }`}>
               <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse"/>
-              Fetching weather data...
+              Fetching weather...
+            </div>
+          )}
+
+          {!activePlant && (
+            <div className={`absolute top-3 right-3 z-10 flex items-center gap-1.5 p-1 rounded-xl border shadow-lg backdrop-blur-md
+              transition-all duration-300
+              ${dk ? 'bg-slate-900/85 border-slate-600/60' : 'bg-white/90 border-slate-200'}`}>
+              {[
+                { id: 'all',     label: 'All'     },
+                { id: 'solar',   label: 'Solar'   },
+                { id: 'biomass', label: 'Biomass' },
+              ].map(btn => {
+                const active = filterType === btn.id;
+                return (
+                  <button
+                    key={btn.id}
+                    onClick={() => handleFilter(btn.id)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200
+                      ${active
+                        ? btn.id === 'solar'   ? 'bg-yellow-500/90 text-slate-900 shadow-md shadow-yellow-500/30'
+                        : btn.id === 'biomass' ? 'bg-emerald-600/90 text-white shadow-md shadow-emerald-600/30'
+                        :                        'bg-blue-600/90 text-white shadow-md shadow-blue-600/30'
+                        : dk ? 'text-slate-400 hover:text-white hover:bg-slate-700/80'
+                             : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
+                      }`}
+                  >
+                    {btn.label}
+                  </button>
+                );
+              })}
             </div>
           )}
 
           <iframe
             ref={mapRef}
-            key={`${dk ? 'dark' : 'light'}-w${weatherDataReady}`}
+            key={dk ? 'dark' : 'light'}
             title="Fleet Map"
             srcDoc={mapHTML}
             className="absolute inset-0 w-full h-full border-0"
             sandbox="allow-scripts allow-same-origin"
           />
 
-          {/* Plant detail popup */}
           {activePlant && (
-            <div className={`absolute top-3 right-3 w-64 rounded-2xl shadow-2xl border p-4 z-10 ${
+            <div className={`absolute top-3 right-3 w-60 rounded-2xl shadow-2xl border p-4 z-10 ${
               dk ? 'bg-slate-800/96 border-slate-600' : 'bg-white/96 border-slate-200'
             }`}>
               <div className="flex items-center justify-between mb-3">
@@ -842,10 +1009,6 @@ const FleetOverviewPage = ({ theme, onEnterDashboard }) => {
                   {activePlant.status.toUpperCase()}
                 </span>
               </div>
-
-              {/* ── Weather section ── */}
-              <WeatherMiniCard weather={activeWeather} theme={theme} />
-
               <div className="grid grid-cols-2 gap-y-2.5 gap-x-3 text-xs mb-3">
                 {[
                   { label:'Power',        value:`${fmt(activePlant.power)} kW`,              col:'text-blue-400'   },
@@ -921,13 +1084,10 @@ const FleetOverviewPage = ({ theme, onEnterDashboard }) => {
               .map((p, i) => {
                 const max = Math.max(...plantData.map(x => x.toNow));
                 return (
-                  <div key={p.id} className="mb-2 cursor-pointer"
-                    onClick={() => selectPlant(p.id)}>
+                  <div key={p.id} className="mb-2 cursor-pointer" onClick={() => selectPlant(p.id)}>
                     <div className="flex justify-between text-[10px] mb-0.5">
                       <span className={`font-semibold ${selected===p.id?'text-blue-400':sub}`}>{p.name}</span>
-                      <span className={`font-bold ${tx}`}>
-                        {p.toNow.toLocaleString()} kWh
-                      </span>
+                      <span className={`font-bold ${tx}`}>{p.toNow.toLocaleString()} kWh</span>
                     </div>
                     <div className={`h-2 rounded-full overflow-hidden ${dk?'bg-slate-700':'bg-slate-100'}`}>
                       <div className="h-full rounded-full transition-all duration-700"
@@ -938,7 +1098,6 @@ const FleetOverviewPage = ({ theme, onEnterDashboard }) => {
               })}
           </Panel>
 
-          {/* ── Plant Status with weather temp badge ── */}
           <Panel theme={theme} className="p-3">
             <p className={`text-sm font-bold mb-2 ${tx}`}>Plant Status</p>
             <div className="space-y-1.5">
@@ -964,11 +1123,7 @@ const FleetOverviewPage = ({ theme, onEnterDashboard }) => {
                       </div>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      {w && (
-                        <span className={`text-[9px] font-bold ${tempCol}`}>
-                          {w.temp}°C
-                        </span>
-                      )}
+                      {w && <span className={`text-[9px] font-bold ${tempCol}`}>{w.temp}°C</span>}
                       <ChevronRight className={`w-3.5 h-3.5 ${sub}`} />
                     </div>
                   </div>
@@ -977,7 +1132,6 @@ const FleetOverviewPage = ({ theme, onEnterDashboard }) => {
             </div>
           </Panel>
 
-          {/* ── Active Alarms ── */}
           {(() => {
             const src = activePlant ? [activePlant] : plantData;
             const alarmCounts = {
@@ -1025,11 +1179,6 @@ const FleetOverviewPage = ({ theme, onEnterDashboard }) => {
                         <span className={`ml-auto font-bold ${val > 0 ? 'text-yellow-400' : tx}`}>{val}</span>
                       </div>
                     ))}
-                    {activePlant && alarmCounts.Warning > 0 && (
-                      <p className="text-[9px] text-yellow-400 mt-1 pt-1 border-t border-yellow-700/30">
-                        ⚠ {activePlant.name} requires attention
-                      </p>
-                    )}
                     {!activePlant && alarmCounts.Warning > 0 && (
                       <p className="text-[9px] text-yellow-400 mt-1 pt-1 border-t border-yellow-700/30">
                         ⚠ {plantData.filter(p=>p.status==='warning').map(p=>p.name).join(', ')}
