@@ -312,7 +312,7 @@ const Planning = ({
                 </div>
 
                 {/* Right: Cost & Action */}
-                <div className="flex items-center gap-4 lg:flex-row flex-col lg:items-center items-start">
+                <div className="flex items-center gap-4 lg:flex-row flex-col lg:items-center">
                   
                   {/* Cost Info */}
                   <div className="text-right">

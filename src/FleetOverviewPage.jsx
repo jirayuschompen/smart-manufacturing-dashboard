@@ -90,7 +90,7 @@ const PLANTS = [
   { id: 'PV2', name: 'ETE-PV2',  lat: 13.821041, lng: 102.298019,
     capacity: 100, power: 45.20, pr: 81.2, irradiation: 5.6, status: 'online',  type: 'solar'   },
   { id: 'PV3', name: 'ETE-PV3',  lat: 13.648165, lng: 102.461136,
-    capacity: 45,  power: 62.80, pr: 72.1, irradiation: 5.4, status: 'warning', type: 'biomass' },
+    capacity: 45,  power: 62.80, pr: 72.1, irradiation: 5.4, status: 'warning', type: 'solar' },
   { id: 'PV4', name: 'ETE-PV4',  lat: 11.090021, lng: 99.442207,
     capacity: 100, power: 28.40, pr: 82.8, irradiation: 6.1, status: 'online',  type: 'solar'   },
 ];
@@ -256,7 +256,7 @@ const WeatherFloatCard = ({ weather, plantName, theme }) => {
   const tempColor = weather.temp > 35 ? 'text-orange-400' : weather.temp < 20 ? 'text-blue-400' : 'text-green-400';
 
   return (
-    <div className={`absolute top-3 left-3 z-10 rounded-2xl border shadow-2xl px-5 py-4 min-w-[230px]
+    <div className={`absolute top-3 left-3 z-10 rounded-2xl border shadow-2xl px-5 py-9 min-w-[290px]
       backdrop-blur-md transition-all duration-300
       ${dk ? 'bg-slate-900/88 border-slate-600/60' : 'bg-white/92 border-slate-200'}`}>
       <div className="flex items-center gap-3.5 mb-3">
@@ -295,11 +295,12 @@ const WeatherFloatCard = ({ weather, plantName, theme }) => {
 };
 
 // ── Build the full Leaflet HTML ─────────────────────────────
-const buildMapHTML = (isDark, weatherMap = {}, powerMap = {}) => {
+const buildMapHTML = (isDark, weatherMap = {}, powerMap = {}, irradianceMap = {}) => {
   const plantsJson = JSON.stringify(PLANTS.map(p => ({
     id: p.id, name: p.name, lat: p.lat, lng: p.lng,
     status: p.status,
-    power: powerMap[p.id] ?? p.power,
+    power:      powerMap[p.id]      ?? p.power,
+    irradiance: irradianceMap[p.id] ?? 0,
     pr: p.pr,
     type: p.type ?? 'solar',
     weather: weatherMap[p.id] || null,
@@ -366,55 +367,45 @@ const statusColor = (s) =>
 const markerMap = {};
 
 // ── Build chip inner HTML ────────────────────────────────────
-function buildChipsInner(plant) {
-  const pCol = plant.status === 'warning' ? '#f59e0b' : '#facc15';
-  const pKw  = Math.round(plant.power);
-  const bg   = isDark ? 'rgba(2,6,23,0.92)' : 'rgba(10,18,38,0.86)';
+// ─────────────────────────────────────────────────────────────
+// แทนที่ส่วน <script> ทั้งหมดภายใน buildMapHTML ด้วยโค้ดนี้
+// (ตั้งแต่บรรทัด  function buildChipsInner  จนถึง  const LABEL_H  +  plants.forEach)
+// ─────────────────────────────────────────────────────────────
 
-  let inner = '';
-  if (plant.weather) {
-    const temp    = plant.weather.temp;
-    const tempCol = temp > 35 ? '#f97316' : temp < 20 ? '#60a5fa' : '#22c55e';
-    inner = \`
-      <div style="display:flex;align-items:center;gap:4px;
-        background:\${bg};border:1.5px solid \${tempCol}80;
-        border-radius:8px;padding:4px 9px;
-        font-size:11px;font-weight:800;white-space:nowrap;
-        box-shadow:0 2px 8px rgba(0,0,0,0.5);backdrop-filter:blur(6px);">
-        <svg width="9" height="9" viewBox="0 0 24 24">
-          <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"
-            stroke="\${tempCol}" stroke-width="2.5" fill="none"/>
-        </svg>
-        <span style="color:\${tempCol}">\${temp}°C</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:4px;
-        background:\${bg};border:1.5px solid \${pCol}80;
-        border-radius:8px;padding:4px 9px;
-        font-size:11px;font-weight:800;white-space:nowrap;
-        box-shadow:0 2px 8px rgba(0,0,0,0.5);backdrop-filter:blur(6px);">
-        <svg width="9" height="9" viewBox="0 0 24 24">
-          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"
-            stroke="\${pCol}" stroke-width="2" fill="\${pCol}" opacity="0.9"/>
-        </svg>
-        <span style="color:\${pCol}">\${pKw}kW</span>
-      </div>
-    \`;
-  } else {
-    inner = \`
-      <div style="display:flex;align-items:center;gap:4px;
-        background:\${bg};border:1.5px solid \${pCol}80;
-        border-radius:8px;padding:4px 9px;
-        font-size:11px;font-weight:800;white-space:nowrap;
-        box-shadow:0 2px 8px rgba(0,0,0,0.5);">
-        <svg width="9" height="9" viewBox="0 0 24 24">
-          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"
-            stroke="\${pCol}" stroke-width="2" fill="\${pCol}" opacity="0.9"/>
-        </svg>
-        <span style="color:\${pCol}">\${pKw}kW</span>
-      </div>
-    \`;
-  }
-  return inner;
+// ── Build chip inner HTML (เนื้อในแถวข้อมูลเท่านั้น ไม่มีกล่องนอก) ──
+function buildChipsInner(plant) {
+  const pCol   = plant.status === 'warning' ? '#f59e0b' : '#facc15';
+  const pKw    = Math.round(plant.power);
+  const irrW   = plant.irradiance ?? 0;
+  const irrCol = '#c084fc';
+
+  return \`
+    <div style="display:flex;align-items:center;gap:6px;
+      font-size:18px;font-weight:400;white-space:nowrap;">
+
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none"> // irradiance icon
+        <circle cx="12" cy="12" r="4" stroke="\${irrCol}" stroke-width="2.5"/>
+        \${[0,45,90,135,180,225,270,315].map(deg => {
+          const a  = deg * Math.PI / 180;
+          const x1 = (12 + 7.5 * Math.cos(a)).toFixed(1);
+          const y1 = (12 + 7.5 * Math.sin(a)).toFixed(1);
+          const x2 = (12 + 10  * Math.cos(a)).toFixed(1);
+          const y2 = (12 + 10  * Math.sin(a)).toFixed(1);
+          return \`<line x1="\${x1}" y1="\${y1}" x2="\${x2}" y2="\${y2}"
+            stroke="\${irrCol}" stroke-width="2" stroke-linecap="round"/>\`;
+        }).join('')}
+      </svg>
+      <span style="color:\${irrCol}">\${irrW} W/m²</span>
+
+      <span style="color:rgba(255,255,255,0.25);font-weight:300">│</span>
+
+      <svg width="12" height="12" viewBox="0 0 24 24"> // power icon
+        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"
+          stroke="\${pCol}" stroke-width="2" fill="\${pCol}" opacity="0.9"/>
+      </svg>
+      <span style="color:\${pCol}">\${pKw} kW</span>
+    </div>
+  \`;
 }
 
 // ── Build type icon SVG ──────────────────────────────────────
@@ -440,89 +431,77 @@ function buildTypeIcon(type) {
   </svg>\`;
 }
 
-// ── Build single unified marker HTML ────────────────────────
-//  Layout (one block, no separate label marker):
-//    [  Plant Name  ]   ← name row on TOP
-//    [●] [chip] [chip]  ← circle + chips row
+// ── Build marker HTML ────────────────────────────────────────
+//  Layout:  [●]  [ ETEM-PV1       ]
+//                [ ☀ 870 W/m² │ ⚡ 222 kW ]
 //
 function buildMarkerHtml(p) {
   const col      = statusColor(p.status);
-  const nameCol  = isDark ? '#ffffff' : '#ffffff';
-  const chipsInner = buildChipsInner(p);
-  const typeIcon   = buildTypeIcon(p.type);
-  const pingHtml   = p.status === 'online'
-    ? \`<div style="position:absolute;inset:0;border-radius:50%;background:\${col};opacity:0.2;animation:ping 1.5s infinite;pointer-events:none;z-index:1;"></div>\`
+  const typeIcon = buildTypeIcon(p.type);
+  const pingHtml = p.status === 'online'
+    ? \`<div style="position:absolute;inset:0;border-radius:50%;
+        background:\${col};opacity:0.2;animation:ping 1.5s infinite;
+        pointer-events:none;z-index:1;"></div>\`
     : '';
+  const bg = isDark ? 'rgba(2,6,23,0.92)' : 'rgba(10,18,38,0.86)';
 
   return \`
-    <div style="
-      display:inline-flex;
-      flex-direction:column;
-      align-items:flex-start;
-      pointer-events:none;
-      gap:0px;
-    ">
-      <!-- ① Plant name label — always on top -->
-      <div style="
-        font-size:11px;
-        font-weight:7F00;
-        white-space:nowrap;
-        color:\${nameCol};
-        text-shadow:0 1px 4px rgba(0,0,0,0.95), 0 0 8px rgba(0,0,0,0.85), 1px 1px 0 rgba(0,0,0,1);
-        letter-spacing:0.4px;
-        margin-bottom:1px;
-        padding-left:1px;
-        line-height:1;
-        pointer-events:none;
-      ">\${p.name}</div>
+    <div style="display:inline-flex;align-items:center;gap:7px;pointer-events:none;">
 
-      <!-- ② Circle marker + chips — same row -->
-      <div style="display:flex;align-items:center;gap:7px;pointer-events:auto;">
-
-        <!-- Circle -->
-        <div style="position:relative;width:36px;height:36px;flex-shrink:0;">
-          \${pingHtml}
-          <div
-            class="plant-marker"
-            data-plant-id="\${p.id}"
-            data-plant-type="\${p.type}"
-            style="
-              width:40px;height:40px;
-              background:radial-gradient(circle at 35% 35%, \${col}ee, \${col}66);
-              border-color:\${col};
-            "
-          >
-            \${typeIcon}
-          </div>
+      <!-- วงกลม marker -->
+      <div style="position:relative;width:40px;height:40px;flex-shrink:0;">
+        \${pingHtml}
+        <div class="plant-marker"
+          data-plant-id="\${p.id}"
+          data-plant-type="\${p.type}"
+          style="width:40px;height:40px;
+            background:radial-gradient(circle at 35% 35%, \${col}ee, \${col}66);
+            border-color:\${col};pointer-events:auto;">
+          \${typeIcon}
         </div>
-
-        <!-- Chips column -->
-        <div data-chip-wrapper style="
-          display:flex;
-          flex-direction:column;
-          gap:5px;
-          pointer-events:none;
-          transition:opacity 0.25s ease;
-        ">
-          \${chipsInner}
-        </div>
-
       </div>
+
+      <!-- กล่องรวม: ชื่อบน + ข้อมูลล่าง -->
+      <div data-chip-wrapper style="
+        display:flex;flex-direction:column;gap:3px;
+        background:\${bg};
+        border:1.5px solid rgba(255,255,255,0.14);
+        border-radius:9px;
+        padding:5px 10px 6px 10px;
+        box-shadow:0 2px 10px rgba(0,0,0,0.55);
+        backdrop-filter:blur(6px);
+        pointer-events:none;
+        transition:opacity 0.25s ease;
+      ">
+        <!-- ชื่อสถานี -->
+        <span style="
+          font-size:10px;font-weight:700;
+          color:rgba(255,255,255,0.50);
+          letter-spacing:0.7px;
+          text-transform:uppercase;
+          line-height:1;
+        ">\${p.name}</span>
+
+        <!-- แถวข้อมูล -->
+        <div data-chips-row>
+          \${buildChipsInner(p)}
+        </div>
+      </div>
+
     </div>
   \`;
 }
 
-// LABEL_H: approx height of the name row (font 11px + margin-bottom 4px)
-const LABEL_H = 19;
+// ไม่มีชื่อลอยแล้ว → LABEL_H = 0
+// anchor = กึ่งกลางวงกลม x=20, y=20
+const LABEL_H = 0;
 
 plants.forEach(p => {
   const svgIcon = L.divIcon({
     className: '',
     html: buildMarkerHtml(p),
-    // iconSize covers only the circle; label + chips overflow visually but don't affect hit-testing
-    iconSize:   [36, LABEL_H + 36],
-    // anchor at circle center: x=18 (circle mid), y=LABEL_H+18 (past label + half circle)
-    iconAnchor: [18, LABEL_H + 18],
+    iconSize:   [40, 40],
+    iconAnchor: [20, 20],   // กึ่งกลางวงกลมพอดี
   });
 
   const marker = L.marker([p.lat, p.lng], { icon: svgIcon }).addTo(map);
@@ -590,21 +569,24 @@ window.addEventListener('message', (e) => {
   if (e.data.type === 'update-chips') {
     const plant = plants.find(p => p.id === e.data.id);
     if (!plant) return;
-    plant.power   = e.data.power;
-    plant.weather = e.data.weather;
+    plant.power      = e.data.power;
+    plant.irradiance = e.data.irradiance ?? 0;
+    plant.weather    = e.data.weather;
 
     const marker = markerMap[e.data.id];
     if (!marker) return;
     const markerEl = marker.getElement();
     if (!markerEl) return;
 
+    // อัปเดตเฉพาะแถวข้อมูล ชื่อไม่เปลี่ยน
+    const chipsRow = markerEl.querySelector('[data-chips-row]');
+    if (chipsRow) chipsRow.innerHTML = buildChipsInner(plant);
+
     const wrapper = markerEl.querySelector('[data-chip-wrapper]');
-    if (!wrapper) return;
-
-    wrapper.innerHTML = buildChipsInner(plant);
-
-    const z = map.getZoom();
-    wrapper.style.opacity = z >= CHIP_SHOW_ZOOM ? '1' : '0';
+    if (wrapper) {
+      const z = map.getZoom();
+      wrapper.style.opacity = z >= CHIP_SHOW_ZOOM ? '1' : '0';
+    }
   }
 });
 </script>
@@ -741,7 +723,8 @@ const FleetOverviewPage = ({ theme, onEnterDashboard }) => {
   }, []);
 
   const powerMap = Object.fromEntries(plantData.map(p => [p.id, p.power]));
-  const mapHTML  = buildMapHTML(dk, plantWeather, powerMap);
+  const irradianceMap = Object.fromEntries(plantData.map(p => [p.id, p.irradiance]));
+  const mapHTML  = buildMapHTML(dk, plantWeather, powerMap, irradianceMap);
 
   useEffect(() => {
     if (!mapRef.current?.contentWindow) return;
@@ -752,11 +735,12 @@ const FleetOverviewPage = ({ theme, onEnterDashboard }) => {
         type: 'update-chips',
         id: p.id,
         power: powerMap[p.id] ?? p.power,
+        irradiance:  irradianceMap[p.id] ?? 0,
         weather: plantWeather[p.id] || null,
       }, '*');
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [plantWeather, JSON.stringify(powerMap)]);
+  }, [plantWeather, JSON.stringify(powerMap), JSON.stringify(irradianceMap)]);
 
   const yieldBarData = Array.from({ length: DAYS_TOTAL }, (_, i) => {
     const src = activePlant ? [activePlant] : plantData;
@@ -789,7 +773,7 @@ const FleetOverviewPage = ({ theme, onEnterDashboard }) => {
             <p className={`text-[9px] ${sub} -mt-1 mb-1`}>
               {/* Yield to now: {(activePlant ? activePlant.toNow : totalYield).toLocaleString()} kWh */}
             </p>
-            <ResponsiveContainer width="100%" height={100}>
+            <ResponsiveContainer width="100%" height={120}>
               <AreaChart data={activePlant ? activePlant.powerHourly : plantData.reduce((acc, p) => acc.map((d,i) => ({ h: d.h, kw: (d.kw??0) + (p.powerHourly[i].kw ?? 0) })), plantData[0].powerHourly.map(d=>({...d})))} margin={{ top:2, right:2, left:-28, bottom:0 }}>
                 <defs>
                   <linearGradient id="pwG" x1="0" y1="0" x2="0" y2="1">
@@ -865,6 +849,31 @@ const FleetOverviewPage = ({ theme, onEnterDashboard }) => {
           })()}
 
           <Panel theme={theme} className="p-3">
+            <p className={`text-sm font-bold mb-2 ${tx}`}>O&M Statistics</p>
+            <div className="flex items-center gap-3">
+              <svg width="48" height="48" viewBox="0 0 48 48">
+                <circle cx="24" cy="24" r="18" fill="none" stroke={dk?'#334155':'#e2e8f0'} strokeWidth="9"/>
+                <text x="24" y="28" textAnchor="middle" fontSize="8"
+                  fill={dk?'#94a3b8':'#64748b'} fontWeight="bold">O&M</text>
+              </svg>
+              <div className="space-y-1 text-[9px]">
+                {[
+                  {col:'bg-green-400', label:'To be approved',  val:0},
+                  {col:'bg-orange-400',label:'To be dispatched',val:0},
+                  {col:'bg-blue-400',  label:'Discarded',       val:0},
+                  {col:'bg-purple-400',label:'Ongoing',         val:0},
+                ].map(r => (
+                  <div key={r.label} className="flex items-center gap-1.5">
+                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${r.col}`}/>
+                    <span className={sub}>{r.label}</span>
+                    <span className={`ml-auto font-bold ${tx}`}>{r.val}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Panel>
+
+          <Panel theme={theme} className="p-3">
             <p className={`text-sm font-bold mb-2 ${tx}`}>Environmental Benefits</p>
             <div className="flex justify-around mb-2">
               {[{icon:'🚂',label:'Coal saved'},{icon:'🏭',label:'CO₂ avoided'},{icon:'🌲',label:'Trees equiv.'}]
@@ -894,30 +903,6 @@ const FleetOverviewPage = ({ theme, onEnterDashboard }) => {
             </div>
           </Panel>
 
-          <Panel theme={theme} className="p-3">
-            <p className={`text-sm font-bold mb-2 ${tx}`}>O&M Statistics</p>
-            <div className="flex items-center gap-3">
-              <svg width="48" height="48" viewBox="0 0 48 48">
-                <circle cx="24" cy="24" r="18" fill="none" stroke={dk?'#334155':'#e2e8f0'} strokeWidth="9"/>
-                <text x="24" y="28" textAnchor="middle" fontSize="8"
-                  fill={dk?'#94a3b8':'#64748b'} fontWeight="bold">O&M</text>
-              </svg>
-              <div className="space-y-1 text-[9px]">
-                {[
-                  {col:'bg-green-400', label:'To be approved',  val:0},
-                  {col:'bg-orange-400',label:'To be dispatched',val:0},
-                  {col:'bg-blue-400',  label:'Discarded',       val:0},
-                  {col:'bg-purple-400',label:'Ongoing',         val:0},
-                ].map(r => (
-                  <div key={r.label} className="flex items-center gap-1.5">
-                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${r.col}`}/>
-                    <span className={sub}>{r.label}</span>
-                    <span className={`ml-auto font-bold ${tx}`}>{r.val}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </Panel>
         </div>
 
         {/* CENTER: Leaflet iframe ─────────────────────────── */}
@@ -999,7 +984,7 @@ const FleetOverviewPage = ({ theme, onEnterDashboard }) => {
           />
 
           {activePlant && (
-            <div className={`absolute top-3 right-3 w-60 rounded-2xl shadow-2xl border p-4 z-10 ${
+            <div className={`absolute top-3 right-3 w-72 rounded-2xl shadow-2xl border p-4 z-10 ${
               dk ? 'bg-slate-800/96 border-slate-600' : 'bg-white/96 border-slate-200'
             }`}>
               <div className="flex items-center justify-between mb-3">
@@ -1023,16 +1008,24 @@ const FleetOverviewPage = ({ theme, onEnterDashboard }) => {
                   </div>
                 ))}
               </div>
-              <div className="flex gap-2">
-                <button onClick={() => setSelected(null)}
-                  className={`flex-1 py-1.5 text-xs font-semibold rounded-lg border transition ${
-                    dk ? 'border-slate-600 text-slate-400 hover:bg-slate-700'
-                       : 'border-slate-200 text-slate-500 hover:bg-slate-50'
-                  }`}>Close</button>
+              
+              <div className="flex flex-col gap-2 mt-1">
                 {onEnterDashboard && (
-                  <button onClick={onEnterDashboard}
-                    className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition">
-                    Detail <ChevronRight className="w-3 h-3" />
+                  <button
+                    onClick={() => onEnterDashboard(activePlant.id)}
+                    className="w-full flex items-center justify-center gap-1.5 py-2
+                      bg-blue-600 hover:bg-blue-700 active:scale-95
+                      text-white text-xs font-bold rounded-lg transition-all"
+                  >
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none"
+                      stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                      <rect x="3" y="3" width="7" height="7" rx="1"/>
+                      <rect x="14" y="3" width="7" height="7" rx="1"/>
+                      <rect x="3" y="14" width="7" height="7" rx="1"/>
+                      <rect x="14" y="14" width="7" height="7" rx="1"/>
+                    </svg>
+                    View {activePlant.name} Dashboard
+                    <ChevronRight className="w-3 h-3" />
                   </button>
                 )}
               </div>
