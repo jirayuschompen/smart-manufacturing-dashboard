@@ -122,7 +122,7 @@ function buildChipsInner(plant) {
 
   return \`
     <div style="display:flex;align-items:center;gap:6px;
-      font-size:14px;font-weight:500;white-space:nowrap;">
+      font-size:18px;font-weight:400;white-space:nowrap;">
 
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none"> // irradiance icon
         <circle cx="12" cy="12" r="4" stroke="\${irrCol}" stroke-width="2.5"/>
