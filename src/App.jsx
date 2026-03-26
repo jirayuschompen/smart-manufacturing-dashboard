@@ -83,6 +83,9 @@
       const [successMessage, setSuccessMessage] = useState('');
       const [language, setLanguage] = useState('en');
       const [theme, setTheme] = useState('dark');
+      const [fleetSummary, setFleetSummary] = useState(null);
+      const [plantWeather, setPlantWeather] = useState({});
+      const [allPlantsData, setAllPlantsData] = useState([]);
       const [selectedPlantId,   setSelectedPlantId]   = useState(null);
       const [selectedPlantData, setSelectedPlantData] = useState(null);
       const [selectedMachine, setSelectedMachine] = useState(null);
@@ -101,14 +104,6 @@
       const [showAllAlerts, setShowAllAlerts] = useState(false);
       const [alertFilter, setAlertFilter] = useState('all');
       const [alertSearch, setAlertSearch] = useState('');
-
-      const weatherData = {
-        temp: 32.5,
-        condition: 'Partly Cloudy',
-        humidity: 65,
-        windSpeed: 12,
-        pressure: 1012,
-      };
 
       const productionDataSets = {
         daily: generateHourlyOEE(),
@@ -806,7 +801,14 @@
                 return (
                   <button
                     key={tab.id}
-                    onClick={() => { setActiveTab(tab.id); setSidebarOpen(false); }}
+                    onClick={() => {
+                        setActiveTab(tab.id);
+                        setSidebarOpen(false);
+                        if (tab.id === 'overview') {
+                          setSelectedPlantId(null);
+                          setSelectedPlantData(null);
+                        }
+                      }}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all
                       ${isActive
                         ? (theme === 'dark' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40' : 'bg-blue-600 text-white shadow-md shadow-blue-200')
@@ -878,6 +880,9 @@
             <div className="h-[calc(100vh-80px)] -mx-20 -mt-2">
               <FleetOverviewPage
                 theme={theme}
+                onFleetDataUpdate={setFleetSummary}
+                onWeatherUpdate={setPlantWeather}
+                onPlantDataUpdate={setAllPlantsData} 
                 onEnterDashboard={(plantId, plantData) => {
                   setSelectedPlantId(plantId);
                   setSelectedPlantData(plantData);
@@ -892,7 +897,7 @@
               <Overview 
                 theme={theme}
                 currentLang={currentLang}
-                weatherData={weatherData}
+                weatherData={selectedPlantId ? (plantWeather[selectedPlantId] ?? null) : null}
                 kpiCards={kpiCards}
                 productionDataSets={productionDataSets}
                 productionPeriod={productionPeriod}
@@ -918,8 +923,21 @@
                 filteredAlerts={filteredAlerts}
                 plantId={selectedPlantId}
                 activePlantData={selectedPlantData}
+                fleetSummary={fleetSummary}
+                allPlantsData={allPlantsData}
+                onEnterDashboard={(plantId, plantData) => {     // ← เพิ่มบรรทัดนี้
+                  setSelectedPlantId(plantId);
+                  setSelectedPlantData(plantData);
+                }}
+                plantWeather={plantWeather}
+
+                // onBackToFleet={() => {
+                // setActiveTab('fleet');
+                // }}
+
                 onBackToFleet={() => {
-                setActiveTab('fleet');
+                  setSelectedPlantId(null);
+                  setSelectedPlantData(null);
                 }}
                 />
 

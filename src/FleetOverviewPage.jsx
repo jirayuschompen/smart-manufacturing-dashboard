@@ -7,6 +7,8 @@ import {
 } from 'recharts';
 import { fetchWeatherDataByLocation } from './weatherService';
 
+
+
 // ── Semi-circular Gauge ──────────────────────────────────────
 const SemiGauge = ({ value = 50, min = 0, max = 100, theme }) => {
   const dk = theme === 'dark';
@@ -86,20 +88,18 @@ const getYieldToNow = (dailyYield, curFrac) => {
 
 const PLANTS = [
   { id: 'PV1', name: 'ETEM-PV1', lat: 12.312631, lng: 102.598152,
-    capacity: 120, power: 97.51, pr: 78.4, irradiation: 5.8, status: 'online',  type: 'solar'   },
+    capacity: 5000, power: 97.51, pr: 78.4, irradiation: 5.8, status: 'online',  type: 'solar'   },
   { id: 'PV2', name: 'ETE-PV2',  lat: 13.821041, lng: 102.298019,
-    capacity: 100, power: 45.20, pr: 81.2, irradiation: 5.6, status: 'online',  type: 'solar'   },
+    capacity: 5000, power: 45.20, pr: 81.2, irradiation: 5.6, status: 'online',  type: 'solar' , iconOffsetY:-10   },
   { id: 'PV3', name: 'ETE-PV3',  lat: 13.648165, lng: 102.461136,
-    capacity: 45,  power: 62.80, pr: 72.1, irradiation: 5.4, status: 'warning', type: 'solar' },
+    capacity: 1470,  power: 62.80, pr: 72.1, irradiation: 5.4, status: 'warning', type: 'solar', iconOffsetY:10 },
   { id: 'PV4', name: 'ETE-PV4',  lat: 11.090021, lng: 99.442207,
-    capacity: 100, power: 28.40, pr: 82.8, irradiation: 6.1, status: 'online',  type: 'solar'   },
+    capacity: 5000, power: 28.40, pr: 82.8, irradiation: 6.1, status: 'online',  type: 'solar'   },
 ];
 
 const fmt = (v, d = 1) => Number(v).toFixed(d);
 const statusColor = (s) =>
   s === 'online' ? '#22c55e' : s === 'warning' ? '#f59e0b' : '#ef4444';
-
-// const totalCapacity = PLANTS.reduce((s, p) => s + p.capacity, 0);
 
 const Panel = ({ children, className = '', theme }) => (
   <div className={`rounded-xl border ${
@@ -304,7 +304,9 @@ const buildMapHTML = (isDark, weatherMap = {}, powerMap = {}, irradianceMap = {}
     pr: p.pr,
     type: p.type ?? 'solar',
     weather: weatherMap[p.id] || null,
-  })));
+    iconOffsetY: p.iconOffsetY ?? 0,
+    iconOffsetX: p.iconOffsetX ?? 0,   // ← เพิ่มบรรทัดนี้
+})));
 
   return `<!DOCTYPE html>
 <html>
@@ -366,13 +368,6 @@ const statusColor = (s) =>
 
 const markerMap = {};
 
-// ── Build chip inner HTML ────────────────────────────────────
-// ─────────────────────────────────────────────────────────────
-// แทนที่ส่วน <script> ทั้งหมดภายใน buildMapHTML ด้วยโค้ดนี้
-// (ตั้งแต่บรรทัด  function buildChipsInner  จนถึง  const LABEL_H  +  plants.forEach)
-// ─────────────────────────────────────────────────────────────
-
-// ── Build chip inner HTML (เนื้อในแถวข้อมูลเท่านั้น ไม่มีกล่องนอก) ──
 function buildChipsInner(plant) {
   const pCol   = plant.status === 'warning' ? '#f59e0b' : '#facc15';
   const pKw    = Math.round(plant.power);
@@ -383,7 +378,7 @@ function buildChipsInner(plant) {
     <div style="display:flex;align-items:center;gap:6px;
       font-size:18px;font-weight:400;white-space:nowrap;">
 
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none"> // irradiance icon
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
         <circle cx="12" cy="12" r="4" stroke="\${irrCol}" stroke-width="2.5"/>
         \${[0,45,90,135,180,225,270,315].map(deg => {
           const a  = deg * Math.PI / 180;
@@ -399,7 +394,7 @@ function buildChipsInner(plant) {
 
       <span style="color:rgba(255,255,255,0.25);font-weight:300">│</span>
 
-      <svg width="12" height="12" viewBox="0 0 24 24"> // power icon
+      <svg width="12" height="12" viewBox="0 0 24 24">
         <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"
           stroke="\${pCol}" stroke-width="2" fill="\${pCol}" opacity="0.9"/>
       </svg>
@@ -408,7 +403,6 @@ function buildChipsInner(plant) {
   \`;
 }
 
-// ── Build type icon SVG ──────────────────────────────────────
 function buildTypeIcon(type) {
   if (type === 'biomass') {
     return \`<svg viewBox="0 0 24 24" width="19" height="19" fill="none">
@@ -431,10 +425,6 @@ function buildTypeIcon(type) {
   </svg>\`;
 }
 
-// ── Build marker HTML ────────────────────────────────────────
-//  Layout:  [●]  [ ETEM-PV1       ]
-//                [ ☀ 870 W/m² │ ⚡ 222 kW ]
-//
 function buildMarkerHtml(p) {
   const col      = statusColor(p.status);
   const typeIcon = buildTypeIcon(p.type);
@@ -447,8 +437,6 @@ function buildMarkerHtml(p) {
 
   return \`
     <div style="display:inline-flex;align-items:center;gap:7px;pointer-events:none;">
-
-      <!-- วงกลม marker -->
       <div style="position:relative;width:40px;height:40px;flex-shrink:0;">
         \${pingHtml}
         <div class="plant-marker"
@@ -460,8 +448,6 @@ function buildMarkerHtml(p) {
           \${typeIcon}
         </div>
       </div>
-
-      <!-- กล่องรวม: ชื่อบน + ข้อมูลล่าง -->
       <div data-chip-wrapper style="
         display:flex;flex-direction:column;gap:3px;
         background:\${bg};
@@ -473,7 +459,6 @@ function buildMarkerHtml(p) {
         pointer-events:none;
         transition:opacity 0.25s ease;
       ">
-        <!-- ชื่อสถานี -->
         <span style="
           font-size:10px;font-weight:700;
           color:rgba(255,255,255,0.50);
@@ -481,27 +466,20 @@ function buildMarkerHtml(p) {
           text-transform:uppercase;
           line-height:1;
         ">\${p.name}</span>
-
-        <!-- แถวข้อมูล -->
         <div data-chips-row>
           \${buildChipsInner(p)}
         </div>
       </div>
-
     </div>
   \`;
 }
-
-// ไม่มีชื่อลอยแล้ว → LABEL_H = 0
-// anchor = กึ่งกลางวงกลม x=20, y=20
-const LABEL_H = 0;
 
 plants.forEach(p => {
   const svgIcon = L.divIcon({
     className: '',
     html: buildMarkerHtml(p),
     iconSize:   [40, 40],
-    iconAnchor: [20, 20],   // กึ่งกลางวงกลมพอดี
+    iconAnchor: [20 - (p.iconOffsetX ?? 0), 20 - (p.iconOffsetY ?? 0)],   
   });
 
   const marker = L.marker([p.lat, p.lng], { icon: svgIcon }).addTo(map);
@@ -512,7 +490,6 @@ plants.forEach(p => {
   });
 });
 
-// ── Zoom-based chip visibility ─────────────────────────────
 const CHIP_SHOW_ZOOM = 8;
 
 const updateChipVisibility = () => {
@@ -531,7 +508,6 @@ map.on('zoomstart', () => {
 });
 map.whenReady(() => setTimeout(updateChipVisibility, 300));
 
-// ── Message listener ────────────────────────────────────────
 window.addEventListener('message', (e) => {
   if (!e.data) return;
 
@@ -578,7 +554,6 @@ window.addEventListener('message', (e) => {
     const markerEl = marker.getElement();
     if (!markerEl) return;
 
-    // อัปเดตเฉพาะแถวข้อมูล ชื่อไม่เปลี่ยน
     const chipsRow = markerEl.querySelector('[data-chips-row]');
     if (chipsRow) chipsRow.innerHTML = buildChipsInner(plant);
 
@@ -594,8 +569,7 @@ window.addEventListener('message', (e) => {
 </html>`;
 };
 
-// ════════════════════════════════════════════════════════════
-const FleetOverviewPage = ({ theme, onEnterDashboard }) => {
+const FleetOverviewPage = ({ theme, onEnterDashboard, onFleetDataUpdate, onWeatherUpdate, onPlantDataUpdate }) => {
   const dk  = theme === 'dark';
   const tx  = dk ? 'text-white'     : 'text-slate-800';
   const sub = dk ? 'text-slate-400' : 'text-slate-500';
@@ -628,6 +602,7 @@ const FleetOverviewPage = ({ theme, onEnterDashboard }) => {
       });
       setPlantWeather(map);
       setWeatherLoading(false);
+      if (onWeatherUpdate) onWeatherUpdate(map);
     });
   }, []);
 
@@ -681,9 +656,26 @@ const FleetOverviewPage = ({ theme, onEnterDashboard }) => {
   const totalYield   = plantData.reduce((s, p) => s + p.toNow,   0);
   const totalRevenue = plantData.reduce((s, p) => s + p.revenue,  0);
 
-  const [selected, setSelected]     = useState(null);
-  const [filterType, setFilterType] = useState('all');
+  useEffect(() => {
+    if (!onFleetDataUpdate) return;
+    onFleetDataUpdate({
+      totalPower,
+      totalYield,
+      totalRevenue,
+      avgPR: PLANTS.reduce((s, x) => s + x.pr, 0) / PLANTS.length,
+      totalCapacity: PLANTS.reduce((s, p) => s + p.capacity, 0),
+      plantCount: PLANTS.length,
+    });
+    if (onPlantDataUpdate) onPlantDataUpdate(plantData);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [totalPower, totalYield, totalRevenue]);
+
+  const [selected, setSelected]       = useState(null);
+  const [filterType, setFilterType]   = useState('all');
   const [showPRFormula, setShowPRFormula] = useState(false);
+  // ── NEW: breakdown modal state ───────────────────────────
+  const [breakdownModal, setBreakdownModal] = useState(null); // 'yield' | 'revenue' | null
+
   const activePlant   = plantData.find(p => p.id === selected) ?? null;
   const activeWeather = selected ? plantWeather[selected] : null;
   const mapRef        = useRef(null);
@@ -770,9 +762,7 @@ const FleetOverviewPage = ({ theme, onEnterDashboard }) => {
             <p className="text-3xl font-bold text-blue-400">
               {fmt(activePlant ? activePlant.power: totalPower)} kW
             </p>
-            <p className={`text-[9px] ${sub} -mt-1 mb-1`}>
-              {/* Yield to now: {(activePlant ? activePlant.toNow : totalYield).toLocaleString()} kWh */}
-            </p>
+            <p className={`text-[9px] ${sub} -mt-1 mb-1`}></p>
             <ResponsiveContainer width="100%" height={120}>
               <AreaChart data={activePlant ? activePlant.powerHourly : plantData.reduce((acc, p) => acc.map((d,i) => ({ h: d.h, kw: (d.kw??0) + (p.powerHourly[i].kw ?? 0) })), plantData[0].powerHourly.map(d=>({...d})))} margin={{ top:2, right:2, left:-28, bottom:0 }}>
                 <defs>
@@ -793,17 +783,14 @@ const FleetOverviewPage = ({ theme, onEnterDashboard }) => {
             const p = activePlant;
             const yieldVal   = p ? p.toNow     : totalYield;
             const revVal     = p ? p.revenue   : totalRevenue;
-            // const revMax     = p ? p.capacity * 4 * 3 : totalCapacity * 4 * 3;
             const prVal      = p ? p.pr        : PLANTS.reduce((s,x)=>s+x.pr,0)/PLANTS.length;
-            // const capLabel   = p ? `${p.capacity} kWp` : `${totalCapacity} kWp`;
             return [
               {
                 label: 'Yield Today',   col: 'text-yellow-400',
                 bdr: dk ? 'border-yellow-700/30' : 'border-yellow-200',
                 value: `${yieldVal.toLocaleString()} kWh`,
-                // target: ` / ${(16400).toLocaleString()} kWh`,
-                // sub2: p ? capLabel : `${PLANTS.length} sites combined`,
                 gv: yieldVal, gmin: 0, gmax: 16470,
+                isYield: true,
               },
               {
                 label: 'Revenue Today', col: 'text-green-400',
@@ -812,6 +799,7 @@ const FleetOverviewPage = ({ theme, onEnterDashboard }) => {
                 target: ` / ฿${(5.66 * 16470).toLocaleString()}`,
                 sub2: `฿${RATE_PER_KWH} / kWh`,
                 gv: revVal, gmin: 0, gmax: 5.66 * 16470,
+                isRev: true,
               },
               {
                 label: 'Performance Ratio', col: 'text-blue-400',
@@ -824,10 +812,18 @@ const FleetOverviewPage = ({ theme, onEnterDashboard }) => {
               },
             ].map((k) => (
               <div key={k.label}
-                onClick={k.isPR ? () => setShowPRFormula(true) : undefined}
+                onClick={
+                  k.isPR    ? () => setShowPRFormula(true)        :
+                  k.isYield ? () => setBreakdownModal('yield')    :
+                  k.isRev   ? () => setBreakdownModal('revenue')  :
+                  undefined
+                }
                 className={`rounded-xl border p-3 overflow-hidden transition-all duration-300 ${
                   dk ? 'bg-slate-800/80 border-slate-700' : 'bg-white border-slate-200 shadow-sm'
-                } border-l-2 ${k.bdr} ${k.isPR ? 'cursor-pointer hover:ring-2 hover:ring-blue-500/40' : ''}`}>
+                } border-l-2 ${k.bdr} ${
+                  (k.isPR || k.isYield || k.isRev)
+                    ? 'cursor-pointer hover:ring-2 hover:ring-blue-500/40' : ''
+                }`}>
                 <div className="flex items-end justify-between gap-1">
                   <div className="min-w-0">
                     <p className={`text-lg font-bold ${k.col} leading-tight`}>{k.value}</p>
@@ -838,6 +834,11 @@ const FleetOverviewPage = ({ theme, onEnterDashboard }) => {
                         <span className={`text-[9px] px-1.5 py-0.5 rounded font-semibold ${
                           dk ? 'bg-blue-900/40 text-blue-400' : 'bg-blue-50 text-blue-600'
                         }`}>ƒ(x)</span>
+                      )}
+                      {(k.isYield || k.isRev) && (
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-semibold ${
+                          dk ? 'bg-slate-700 text-slate-400' : 'bg-slate-100 text-slate-500'
+                        }`}>↗ breakdown</span>
                       )}
                     </div>
                     <p className={`text-[9px] mt-0.5 ${sub} opacity-60`}>{k.sub2}</p>
@@ -1012,7 +1013,7 @@ const FleetOverviewPage = ({ theme, onEnterDashboard }) => {
               <div className="flex flex-col gap-2 mt-1">
                 {onEnterDashboard && (
                   <button
-                    onClick={() => onEnterDashboard(activePlant.id)}
+                    onClick={() => onEnterDashboard(activePlant.id, activePlant)}
                     className="w-full flex items-center justify-center gap-1.5 py-2
                       bg-blue-600 hover:bg-blue-700 active:scale-95
                       text-white text-xs font-bold rounded-lg transition-all"
@@ -1064,7 +1065,7 @@ const FleetOverviewPage = ({ theme, onEnterDashboard }) => {
                 <YAxis tick={{ fontSize:8 }} />
                 <Tooltip contentStyle={tip} formatter={(v,n) => v ? [`${Number(v).toLocaleString()} kWh`, n] : ['-']} />
                 <Bar dataKey="yield"    name="Actual"   fill="#22c55e" radius={[3,3,0,0]} opacity={0.9} barSize={16} />
-                <Bar dataKey="forecast" name="Forecast" fill={dk?'#334155':'#e2e8f0'} radius={[3,3,0,0]} opacity={0.7} barSize={16} />
+                <Bar dataKey="forecast" name="Forecast" fill="#7dd3fc" radius={[3,3,0,0]} opacity={0.5} barSize={16} />
               </BarChart>
             </ResponsiveContainer>
           </Panel>
@@ -1185,6 +1186,119 @@ const FleetOverviewPage = ({ theme, onEnterDashboard }) => {
         </div>
       </div>
     </div>
+
+    {/* ── Yield / Revenue Breakdown Modal ── */}
+    {breakdownModal && (
+      <div
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+        onClick={() => setBreakdownModal(null)}
+      >
+        <div
+          className={`w-full max-w-md rounded-2xl shadow-2xl border p-6 ${
+            dk ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
+          }`}
+          onClick={e => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h3 className={`text-base font-bold ${tx}`}>
+                {breakdownModal === 'yield' ? '⚡ Yield Breakdown' : '💰 Revenue Breakdown'}
+              </h3>
+              <p className={`text-xs mt-0.5 ${sub}`}>
+                {breakdownModal === 'yield'
+                  ? 'Energy produced today — by plant'
+                  : 'Revenue earned today — by plant'}
+              </p>
+            </div>
+            <button
+              onClick={() => setBreakdownModal(null)}
+              className={`p-1.5 rounded-lg transition ${dk ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}
+            >
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 6L6 18M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+
+          {/* Plant rows */}
+          {(() => {
+            const isYield = breakdownModal === 'yield';
+            const total   = plantData.reduce((s, p) => s + (isYield ? p.toNow : p.revenue), 0);
+            const sorted  = [...plantData].sort((a, b) =>
+              isYield ? b.toNow - a.toNow : b.revenue - a.revenue
+            );
+            return (
+              <div className="space-y-3">
+                {sorted.map((p, i) => {
+                  const val = isYield ? p.toNow : p.revenue;
+                  const pct = total > 0 ? (val / total) * 100 : 0;
+                  const w   = plantWeather[p.id];
+                  const sCol = p.status === 'online' ? '#22c55e'
+                              : p.status === 'warning' ? '#f59e0b' : '#ef4444';
+                  const barCol = i === 0 ? '#22c55e' : '#3b82f6';
+                  return (
+                    <div key={p.id} className={`rounded-xl p-3.5 border ${
+                      dk ? 'bg-slate-700/50 border-slate-600' : 'bg-slate-50 border-slate-200'
+                    }`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="w-2 h-2 rounded-full flex-shrink-0 animate-pulse"
+                            style={{ background: sCol }} />
+                          <span className={`text-sm font-bold ${tx}`}>{p.name}</span>
+                          {w && (
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded-md font-semibold ${
+                              dk ? 'bg-slate-600 text-slate-300' : 'bg-slate-200 text-slate-600'
+                            }`}>
+                              {w.temp}°C · {w.condition}
+                            </span>
+                          )}
+                        </div>
+                        <span className={`text-sm font-bold flex-shrink-0 ${i === 0 ? 'text-green-400' : 'text-blue-400'}`}>
+                          {isYield ? `${val.toLocaleString()} kWh` : `฿${val.toLocaleString()}`}
+                        </span>
+                      </div>
+
+                      {/* Progress bar */}
+                      <div className={`h-2 rounded-full overflow-hidden ${dk ? 'bg-slate-600' : 'bg-slate-200'}`}>
+                        <div
+                          className="h-full rounded-full transition-all duration-700"
+                          style={{ width: `${pct}%`, background: barCol }}
+                        />
+                      </div>
+
+                      <div className={`flex justify-between mt-1.5 text-[9px] ${sub}`}>
+                        <span>{p.capacity} kWp · {p.status}</span>
+                        <span className="font-semibold">{pct.toFixed(1)}% of total</span>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Total row */}
+                <div className={`flex items-center justify-between px-4 py-3 rounded-xl border ${
+                  dk ? 'bg-blue-900/20 border-blue-800/40' : 'bg-blue-50 border-blue-100'
+                }`}>
+                  <span className={`text-xs font-bold ${dk ? 'text-blue-300' : 'text-blue-700'}`}>
+                    Fleet Total
+                  </span>
+                  <span className="text-base font-bold text-blue-400">
+                    {isYield ? `${total.toLocaleString()} kWh` : `฿${total.toLocaleString()}`}
+                  </span>
+                </div>
+              </div>
+            );
+          })()}
+
+          <button
+            onClick={() => setBreakdownModal(null)}
+            className="mt-4 w-full py-2 text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    )}
 
     {/* ── PR Formula Modal ── */}
     {showPRFormula && (

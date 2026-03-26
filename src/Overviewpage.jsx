@@ -1,4 +1,5 @@
 /* eslint-disable no-unused-vars */
+import { useState } from 'react';
 import {
   Wind, Droplets, Gauge, Eye, Sun, CloudRain, Leaf, Zap,
   AlertTriangle, Factory, TrendingUp, Activity, DollarSign,
@@ -110,6 +111,8 @@ const revenueForcastDataSets = {
   ],
 };
 
+
+
 const fmtRevenue = (v) => {
   if (!v) return '฿0';
   if (v >= 1000000) return `฿${(v / 1000000).toFixed(1)}M`;
@@ -147,7 +150,7 @@ const PeriodToggle = ({ value, onChange, options, active = 'bg-blue-600', isDark
     {options.map((p) => (
       <button key={p} onClick={() => onChange(p)}
         className={`px-2.5 py-1 capitalize transition-all ${value === p ? `${active} text-white` : isDark ? 'text-slate-400 hover:bg-slate-700' : 'text-slate-500 hover:bg-slate-50'}`}>
-        {p.slice(0, 3)}
+        {p.charAt(0).toUpperCase() + p.slice(1)}
       </button>
     ))}
   </div>
@@ -177,11 +180,16 @@ const Overview = ({
   showAllAlerts, setShowAllAlerts,
   alertSearch, setAlertSearch, alertFilter, setAlertFilter, filteredAlerts,
   // ── NEW props ──
+  
+  fleetSummary = null,     // ข้อมูล fleet รวมจาก FleetOverviewPage
   plantId = null,          // 'PV1' | 'PV2' | 'PV3' | 'PV4' | null
   activePlantData = null,  // object from plantData[] ใน FleetOverviewPage
-  onBackToFleet = null,    // () => void  — ปุ่ม back
+  onBackToFleet = null,
+  allPlantsData = [],
+  onEnterDashboard = null,    // () => void  — ปุ่ม back
 }) => {
   const dk   = theme === 'dark';
+  const [overviewModal, setOverviewModal] = useState(null);
   const card = `rounded-2xl shadow-sm ${dk ? 'bg-slate-800 border border-slate-700' : 'bg-white border border-slate-200'}`;
   const tx   = dk ? 'text-white'     : 'text-slate-800';
   const sub  = dk ? 'text-slate-400' : 'text-slate-500';
@@ -193,20 +201,64 @@ const Overview = ({
   const p = activePlantData;
   const RATE = 5.66;
 
-  const yieldVal   = p ? p.toNow   : 1842;
-  const yieldMax2  = p ? p.capacity * 8 : 2000;   // ประมาณ peak day
-  const revVal     = p ? p.revenue  : 12450;
-  const revMax2    = p ? p.capacity * 8 * RATE : 58000;
-  const prVal      = p ? p.pr       : 66.2;
-  const powerVal   = p ? p.power    : 0;
+  const f = fleetSummary;
+  const yieldVal   = p ? p.toNow    : (f?.totalYield    ?? 0);
+  const yieldMax2  = p ? p.capacity * 8 : ((f?.totalCapacity ?? 0) * 8);
+  const revVal     = p ? p.revenue   : (f?.totalRevenue  ?? 0);
+  const revMax2    = p ? p.capacity * 8 * RATE : ((f?.totalCapacity ?? 0) * 8 * RATE);
+  const prVal      = p ? p.pr        : (f?.avgPR         ?? 0);
+  const powerVal   = p ? p.power     : (f?.totalPower    ?? 0);
   const irrVal     = p ? p.irradiance : 0;
+
+  // คำนวณ weekly yield จากข้อมูลจริง (7 วันล่าสุด)
+const today = new Date();
+const dayOfMonth = today.getDate();
+const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+const realYieldData = Array.from({ length: 7 }, (_, i) => {
+  const dayIdx = dayOfMonth - 7 + i; // 0-based index ใน monthly array
+  const dayDate = new Date(today.getFullYear(), today.getMonth(), dayIdx + 1);
+  const label = dayNames[dayDate.getDay()];
+  const yVal = dayIdx >= 0
+    ? (p
+        ? (p.monthly[dayIdx] ?? 0)
+        : (f ? (allPlantsData ?? []).reduce((s, pd) => s + (pd.monthly?.[dayIdx] ?? 0), 0) : 0))
+    : 0;
+  return { label, yield: yVal };
+});
+
+  const maxDayYield = Math.max(...realYieldData.map(d => d.yield));
+  const weeklyTarget = Math.round(maxDayYield * 0.8);  const realYieldMax = Math.max(...realYieldData.map(d => d.yield), weeklyTarget);
+  const plantsToCheck = plantId
+    ? allPlantsData.filter(p => p.id === plantId)
+    : allPlantsData;
+  
+  const criticalCount = plantsToCheck.filter(p => p.status === 'offline').length;
+  const warningCount  = plantsToCheck.filter(p => p.status === 'warning').length;
+  const totalAlarms   = criticalCount + warningCount;
+
+  
+  const baseIrr = p
+  ? (p.irradiation ?? 5.4)
+  : allPlantsData.length > 0
+    ? allPlantsData.reduce((s, x) => s + (x.irradiation ?? 5.4), 0) / allPlantsData.length
+    : 5.4;
+
+  const raDataDynamic = [
+    { label: 'Mon', ra: +(baseIrr * 0.95).toFixed(2) },
+    { label: 'Tue', ra: +(baseIrr * 0.92).toFixed(2) },
+    { label: 'Wed', ra: +(baseIrr * 1.02).toFixed(2) },
+    { label: 'Thu', ra: +(baseIrr * 1.05).toFixed(2) },
+    { label: 'Fri', ra: +(baseIrr * 1.00).toFixed(2) },
+    { label: 'Sat', ra: +(baseIrr * 0.88).toFixed(2) },
+    { label: 'Sun', ra: +(baseIrr * 0.82).toFixed(2) },
+  ];
 
   const kpis = [
     {
       title: 'Yield (Today)',
       value: `${yieldVal.toLocaleString()} kWh`,
-      target: `${yieldMax2.toLocaleString()} kWh`,
-      badge: p ? `${p.capacity} kWp` : '+3.2%',
+      badge: p ? p.name : `${(f?.totalCapacity ?? 0) * 8} kWh`,
       up: true,
       icon: Zap, col: 'text-yellow-500',
       bg:  dk ? 'bg-yellow-900/30' : 'bg-yellow-50',
@@ -216,13 +268,13 @@ const Overview = ({
     {
       title: 'Revenue (Today)',
       value: `฿${revVal.toLocaleString()}`,
-      target: `฿${Math.round(revMax2).toLocaleString()}`,
+      target: `฿${(93220.2).toLocaleString()}`,
       badge: `฿${RATE}/kWh`,
       up: true,
       icon: Banknote, col: 'text-green-500',
       bg:  dk ? 'bg-green-900/30' : 'bg-green-50',
       bdr: dk ? 'border-green-700/30' : 'border-green-200',
-      gv: revVal, gmin: 0, gmax: revMax2,
+      gv: revVal, gmin: 0, gmax: 93220.2,
     },
     {
       title: 'Performance Ratio',
@@ -236,18 +288,24 @@ const Overview = ({
       gv: prVal, gmin: 0, gmax: 100,
     },
     {
-      title: p ? 'Live Power' : 'Critical Alerts',
-      value: p ? `${powerVal.toLocaleString()} kW` : '3',
-      target: p ? `${irrVal} W/m²  irr.` : null,
-      badge: p ? `${p.type?.toUpperCase() ?? 'SOLAR'}` : '2 new today',
-      up: p ? true : false,
-      icon: p ? Activity : AlertTriangle,
-      col:  p ? 'text-cyan-500'        : 'text-red-500',
-      bg:   p ? (dk ? 'bg-cyan-900/30' : 'bg-cyan-50')  : (dk ? 'bg-red-900/30' : 'bg-red-50'),
-      bdr:  p ? (dk ? 'border-cyan-700/30' : 'border-cyan-200') : (dk ? 'border-red-700/30' : 'border-red-200'),
-      gv:   p ? powerVal : null,
-      gmin: 0,
-      gmax: p ? p.capacity : 100,
+      title: 'Active Alarms',
+      value: String(totalAlarms),
+      target: null,
+      badge: criticalCount > 0
+        ? `${criticalCount} critical`
+        : warningCount > 0
+          ? `${warningCount} warning${warningCount > 1 ? 's' : ''}`
+          : 'All clear',
+      up: totalAlarms === 0,
+      icon: AlertTriangle,
+      col:  totalAlarms === 0 ? 'text-green-500' : criticalCount > 0 ? 'text-red-500' : 'text-yellow-500',
+      bg:   totalAlarms === 0 ? (dk ? 'bg-green-900/30' : 'bg-green-50')
+          : criticalCount > 0 ? (dk ? 'bg-red-900/30'   : 'bg-red-50')
+          :                     (dk ? 'bg-yellow-900/30' : 'bg-yellow-50'),
+      bdr:  totalAlarms === 0 ? (dk ? 'border-green-700/30' : 'border-green-200')
+          : criticalCount > 0 ? (dk ? 'border-red-700/30'   : 'border-red-200')
+          :                     (dk ? 'border-yellow-700/30' : 'border-yellow-200'),
+      gv: null, gmin: 0, gmax: 100,
     },
   ];
 
@@ -267,30 +325,32 @@ const Overview = ({
                 <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                   <path d="M15 18l-6-6 6-6" />
                 </svg>
-                Fleet Overview
+                Overview
               </button>
             )}
             <div className={`w-px h-5 ${dk ? 'bg-slate-700' : 'bg-slate-200'}`} />
             <div>
               <p className={`text-sm font-bold ${tx}`}>{p.name}</p>
               <p className={`text-[10px] ${sub}`}>
-                {p.capacity} kWp · {p.type} · {p.lat.toFixed(4)}, {p.lng.toFixed(4)}
+                {p.type} · {p.lat.toFixed(4)}, {p.lng.toFixed(4)}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <StatusBadge status={p.status} />
-            <span className={`text-[10px] px-2 py-1 rounded-lg font-semibold ${dk ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>
-              PR {p.pr.toFixed(1)}%
-            </span>
+           {/* 🌤 Weather inline */}
+           
+           {/* <span className={`text-[10px] px-2 py-1 rounded-lg font-semibold ${dk ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>
+             PR {p.pr.toFixed(1)}%
+           </span> */}
           </div>
         </div>
       )}
 
       {/* ── ROW 1: KPI Cards ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-2">
+      <div className={`grid grid-cols-1 gap-2 ${p ? 'lg:grid-cols-5' : 'lg:grid-cols-4'}`}>
         {kpis.map((k, i) => (
-          <div key={i} className={`${card} p-4 border ${k.bdr} overflow-hidden`}>
+  <div key={i} onClick={!p ? () => setOverviewModal(i === 0 ? 'yield' : i === 1 ? 'revenue' : i === 2 ? 'pr' : 'alarms') : undefined}
+  className={`${card} p-4 border ${k.bdr} overflow-hidden ${!p ? 'cursor-pointer hover:ring-2 hover:ring-blue-500/40 transition-all' : ''   }`}>
             <div className="flex items-start justify-between mb-2">
               <div className={`p-2 rounded-xl ${k.bg}`}>
                 <k.icon className={`w-4 h-4 ${k.col}`} />
@@ -307,6 +367,11 @@ const Overview = ({
                 <p className={`text-2xl font-bold ${tx} leading-none`}>{k.value}</p>
                 {k.target && <p className={`text-[11px] font-semibold mt-0.5 ${k.col}`}>/ {k.target}</p>}
                 <p className={`text-xs font-medium mt-1 ${sub}`}>{k.title}</p>
+                  {i === 0 && p && (
+                    <p className={`text-[9px] mt-0.5 ${sub} opacity-60`}>
+                      {p.type} · {p.lat.toFixed(4)}, {p.lng.toFixed(4)}
+                    </p>
+                  )}
               </div>
               {k.gv != null && (
                 <div className="flex-shrink-0 -mb-1">
@@ -316,7 +381,49 @@ const Overview = ({
             </div>
           </div>
         ))}
+        {/* Weather + Status card */}
+{p && (
+  <div className={`${card} p-4 border ${dk ? 'border-slate-700' : 'border-slate-200'} overflow-hidden`}>
+    <div className="flex items-start justify-between mb-2">
+      <div className={`p-2 rounded-xl ${dk ? 'bg-slate-700/60' : 'bg-slate-100'}`}>
+        <span className="text-xl leading-none">
+          {(() => {
+            const iconMap = {
+              'Clear': '☀️', 'Partly Cloudy': '⛅', 'Cloudy': '☁️',
+              'Overcast': '☁️', 'Light Rain': '🌦️', 'Moderate Rain': '🌧️',
+              'Heavy Rain': '🌧️', 'Thunderstorm': '⛈️',
+            };
+            return iconMap[weatherData?.condition] ?? '🌤️';
+          })()}
+        </span>
       </div>
+      <StatusBadge status={p.status} />
+    </div>
+    <div className="min-w-0 mt-1">
+      <p className={`text-2xl font-bold ${tx} leading-none`}>
+        {weatherData?.temp ?? '--'}°C
+      </p>
+      <p className={`text-[11px] font-semibold mt-0.5 text-sky-400`}>
+        {weatherData?.condition ?? '—'}
+      </p>
+      <div className={`flex items-center justify-between mt-3 pt-2 border-t
+        ${dk ? 'border-slate-700' : 'border-slate-100'}`}>
+        <p className={`text-xs font-medium ${sub}`}>Weather</p>
+        <div className="flex items-center gap-2 text-[11px] font-semibold">
+          <span className="flex items-center gap-1 text-blue-400">
+            <Droplets className="w-3 h-3" />{weatherData?.humidity ?? '--'}%
+          </span>
+          <span className={`${dk ? 'text-slate-600' : 'text-slate-300'}`}>│</span>
+          <span className="flex items-center gap-1 text-cyan-400">
+            <Wind className="w-3 h-3" />{weatherData?.windSpeed ?? '--'} km/h
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+      </div>
+      
 
       {/* ── ROW 2: Cash Flow + RA / Yield ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
@@ -355,11 +462,11 @@ const Overview = ({
                 <p className={`text-[10px] ${sub}`}>kWh/m² per day</p>
               </div>
               <span className="text-xl font-bold text-yellow-500">
-                {p ? `${(p.irradiation ?? 5.4).toFixed(1)}` : '5.4'}
+                {baseIrr.toFixed(1)}
               </span>
             </div>
             <ResponsiveContainer width="100%" height={100}>
-              <AreaChart data={raData} margin={{ top: 2, right: 4, left: -28, bottom: 0 }}>
+              <AreaChart data={raDataDynamic} margin={{ top: 2, right: 4, left: -28, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="2 2" stroke={grid} />
                 <XAxis dataKey="label" tick={{ fontSize: 9, fill: dk ? '#94a3b8' : '#64748b' }} />
                 <YAxis tick={{ fontSize: 9 }} domain={[0, 8]} />
@@ -379,23 +486,28 @@ const Overview = ({
               </span>
             </div>
             <ResponsiveContainer width="100%" height={120}>
-              <ComposedChart data={yieldData} margin={{ top: 2, right: 4, left: -28, bottom: 0 }}>
+              <ComposedChart data={realYieldData.map(d => ({ ...d, target: weeklyTarget }))}
+               margin={{ top: 2, right: 4, left: -28, bottom: 0 }}>
+                
                 <CartesianGrid strokeDasharray="2 2" stroke={grid} />
                 <XAxis dataKey="label" tick={{ fontSize: 9, fill: dk ? '#94a3b8' : '#64748b' }} />
-                <YAxis tick={{ fontSize: 9 }} domain={[0, 420]} />
+                <YAxis tick={{ fontSize: 9 }} domain={[0, Math.ceil(realYieldMax * 1.15)]} />
                 <Tooltip contentStyle={tip} formatter={(v, n) => [`${v} kWh`, n]} />
                 <Bar dataKey="yield" name="Yield" radius={[4,4,0,0]}
-                  shape={(props) => {
-                    const { x, y, width, height, value } = props;
-                    return <rect x={x} y={y} width={width} height={height} rx={4} ry={4} fill={value === yieldMax ? '#22c55e' : (dk ? '#3b82f680' : '#93c5fd')} />;
-                  }}
-                />
+                    shape={(props) => {
+                      const { x, y, width, height, value } = props;
+                      return <rect x={x} y={y} width={width} height={height} rx={4} ry={4}
+                        fill={value >= weeklyTarget ? '#22c55e' : '#60a5fa'} />;
+                    }}
+                  />
                 <Line type="monotone" dataKey="target" name="Target" stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="4 2" dot={false} />
               </ComposedChart>
             </ResponsiveContainer>
             <div className={`flex items-center gap-3 mt-1.5 text-[9px] ${sub}`}>
-              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-green-500 inline-block" />Highest day</span>
+              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-green-500 inline-block" />Hit target</span>
               <span className="flex items-center gap-1"><span className="w-4 h-0.5 bg-amber-400 inline-block" />Target</span>
+              <span className="flex items-center gap-1">
+              <span className="w-2.5 h-2.5 rounded-sm bg-blue-400 inline-block" />Below target</span>
             </div>
           </div>
         </div>
@@ -536,6 +648,194 @@ const Overview = ({
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+      {/* ── Overview Breakdown Modal ── */}   ← เพิ่มตรงนี้
+      {overviewModal && !p && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={() => setOverviewModal(null)}
+        >
+          <div
+            className={`w-full max-w-lg rounded-2xl shadow-2xl border p-6 ${
+              dk ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
+            }`}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h3 className={`text-base font-bold ${tx}`}>
+                  {overviewModal === 'yield'   ? '⚡ Yield Breakdown'
+                 : overviewModal === 'revenue' ? '💰 Revenue Breakdown'
+                 : overviewModal === 'pr'      ? '📊 Performance Ratio'
+                 :                              '🚨 Active Alarms'}
+                </h3>
+                <p className={`text-xs mt-0.5 ${sub}`}>
+                  {overviewModal === 'yield'   ? 'Energy produced today — by plant'
+                 : overviewModal === 'revenue' ? 'Revenue earned today — by plant'
+                 : overviewModal === 'pr'      ? 'PR per plant'
+                 :                              'Plants with active alarms'}
+                </p>
+              </div>
+              <button
+                onClick={() => setOverviewModal(null)}
+                className={`p-1.5 rounded-lg transition ${
+                  dk ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-100 text-slate-500'
+                }`}
+              >
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {(() => {
+                const sorted = [...allPlantsData].sort((a, b) => {
+                  if (overviewModal === 'yield')   return b.toNow   - a.toNow;
+                  if (overviewModal === 'revenue') return b.revenue - a.revenue;
+                  if (overviewModal === 'pr')      return b.pr      - a.pr;
+                  const order = { warning: 0, offline: 1, online: 2 };
+                  return (order[a.status] ?? 3) - (order[b.status] ?? 3);
+                });
+
+                const total =
+                  overviewModal === 'yield'   ? allPlantsData.reduce((s, x) => s + x.toNow,   0) :
+                  overviewModal === 'revenue' ? allPlantsData.reduce((s, x) => s + x.revenue, 0) :
+                  overviewModal === 'pr'      ? 100 : null;
+
+                return sorted.map((pd, i) => {
+                  const val =
+                    overviewModal === 'yield'   ? pd.toNow   :
+                    overviewModal === 'revenue' ? pd.revenue :
+                    overviewModal === 'pr'      ? pd.pr      : null;
+
+                  const pct    = total > 0 && val != null ? (val / total) * 100 : 0;
+                  const sCol   = pd.status === 'online'  ? '#22c55e'
+                               : pd.status === 'warning' ? '#f59e0b' : '#ef4444';
+                  const barCol = overviewModal === 'pr'
+                    ? (pd.pr >= 80 ? '#22c55e' : pd.pr >= 70 ? '#f59e0b' : '#ef4444')
+                    : i === 0 ? '#22c55e' : '#3b82f6';
+
+                  if (overviewModal === 'alarms') {
+                    return (
+                      <div
+                        key={pd.id}
+                        onClick={() => {
+                          if (onEnterDashboard) {
+                            setOverviewModal(null);
+                            onEnterDashboard(pd.id, pd);
+                          }
+                        }}
+                        className={`rounded-xl p-3.5 border flex items-center justify-between transition-all
+                          ${onEnterDashboard ? 'cursor-pointer hover:ring-2 hover:ring-blue-500/40' : ''}
+                          ${dk ? 'bg-slate-700/50 border-slate-600' : 'bg-slate-50 border-slate-200'}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 animate-pulse"
+                            style={{ background: sCol }} />
+                          <div>
+                            <p className={`text-sm font-bold ${tx}`}>{pd.name}</p>
+                            <p className={`text-[10px] ${sub}`}>{pd.capacity} kWp</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                            pd.status === 'online'  ? (dk ? 'bg-green-900/30 text-green-400'   : 'bg-green-100 text-green-700')
+                          : pd.status === 'warning' ? (dk ? 'bg-yellow-900/30 text-yellow-400' : 'bg-yellow-100 text-yellow-700')
+                          :                           (dk ? 'bg-red-900/30 text-red-400'       : 'bg-red-100 text-red-700')
+                          }`}>
+                            {pd.status.toUpperCase()}
+                          </span>
+                          {onEnterDashboard && (
+                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none"
+                              stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+                              className={sub}>
+                              <path d="M9 18l6-6-6-6"/>
+                            </svg>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div
+                      key={pd.id}
+                      onClick={() => {
+                        if (onEnterDashboard) {
+                          setOverviewModal(null);
+                          onEnterDashboard(pd.id, pd);
+                        }
+                      }}
+                      className={`rounded-xl p-3.5 border transition-all
+                        ${onEnterDashboard ? 'cursor-pointer hover:ring-2 hover:ring-blue-500/40' : ''}
+                        ${dk ? 'bg-slate-700/50 border-slate-600' : 'bg-slate-50 border-slate-200'}`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: sCol }} />
+                          <span className={`text-sm font-bold ${tx}`}>{pd.name}</span>
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded font-semibold ${
+                            dk ? 'bg-slate-600 text-slate-300' : 'bg-slate-200 text-slate-600'
+                          }`}>{pd.capacity} kWp</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-sm font-bold ${
+                            overviewModal === 'pr'
+                              ? (pd.pr >= 80 ? 'text-green-400' : pd.pr >= 70 ? 'text-yellow-400' : 'text-red-400')
+                              : i === 0 ? 'text-green-400' : 'text-blue-400'
+                          }`}>
+                            {overviewModal === 'yield'   ? `${val.toLocaleString()} kWh`
+                           : overviewModal === 'revenue' ? `฿${val.toLocaleString()}`
+                           :                              `${val.toFixed(1)}%`}
+                          </span>
+                          {onEnterDashboard && (
+                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none"
+                              stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+                              className={sub}>
+                              <path d="M9 18l6-6-6-6"/>
+                            </svg>
+                          )}
+                        </div>
+                      </div>
+                      <div className={`h-2 rounded-full overflow-hidden ${dk ? 'bg-slate-600' : 'bg-slate-200'}`}>
+                        <div className="h-full rounded-full transition-all duration-700"
+                          style={{ width: `${overviewModal === 'pr' ? val : pct}%`, background: barCol }} />
+                      </div>
+                      {overviewModal !== 'pr' && (
+                        <p className={`text-right text-[9px] mt-1 font-semibold ${sub}`}>
+                          {pct.toFixed(1)}% of total
+                        </p>
+                      )}
+                    </div>
+                  );
+                });
+              })()}
+
+              {overviewModal !== 'alarms' && (
+                <div className={`flex items-center justify-between px-4 py-3 rounded-xl border ${
+                  dk ? 'bg-blue-900/20 border-blue-800/40' : 'bg-blue-50 border-blue-100'
+                }`}>
+                  <span className={`text-xs font-bold ${dk ? 'text-blue-300' : 'text-blue-700'}`}>Fleet Total</span>
+                  <span className="text-base font-bold text-blue-400">
+                    {overviewModal === 'yield'
+                      ? `${allPlantsData.reduce((s, x) => s + x.toNow, 0).toLocaleString()} kWh`
+                     : overviewModal === 'revenue'
+                      ? `฿${allPlantsData.reduce((s, x) => s + x.revenue, 0).toLocaleString()}`
+                     : `${(allPlantsData.reduce((s, x) => s + x.pr, 0) / (allPlantsData.length || 1)).toFixed(1)}% avg`}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={() => setOverviewModal(null)}
+              className="mt-4 w-full py-2 text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition"
+            >
+              Close
+            </button>
           </div>
         </div>
       )}
