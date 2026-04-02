@@ -1353,7 +1353,7 @@ const FleetOverviewPage = ({ theme, onEnterDashboard, onFleetDataUpdate, onWeath
           }`}
           onClick={(e) => e.stopPropagation()}
         >
-        
+
           <div className="flex items-center justify-between mb-5">
             <div>
               <h3 className={`text-base font-bold ${tx}`}>Performance Ratio Formula</h3>
