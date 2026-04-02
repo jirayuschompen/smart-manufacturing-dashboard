@@ -942,7 +942,7 @@
                 />
 
                 {/* ─── Sungrow Live Data Panel ─── */}
-                <SungrowLivePanel theme={theme} />
+                {/* <SungrowLivePanel theme={theme} /> */}
               </div>
             )}
 

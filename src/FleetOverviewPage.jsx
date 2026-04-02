@@ -111,6 +111,14 @@ const Panel = ({ children, className = '', theme }) => (
   </div>
 );
 
+// ── Section group label divider ──────────────────────────────
+const SectionLabel = ({ label, dk, sub }) => (
+  <div className="flex items-center gap-2 mt-1">
+    <span className={`text-[9px] font-bold uppercase tracking-widest opacity-60 ${sub}`}>{label}</span>
+    <div className={`flex-1 h-px ${dk ? 'bg-slate-700' : 'bg-slate-200'}`}/>
+  </div>
+);
+
 // ── Weather condition → SVG icon ────────────────────────────
 const WeatherIcon = ({ condition = 'Clear', size = 40 }) => {
   const s = size;
@@ -305,7 +313,7 @@ const buildMapHTML = (isDark, weatherMap = {}, powerMap = {}, irradianceMap = {}
     type: p.type ?? 'solar',
     weather: weatherMap[p.id] || null,
     iconOffsetY: p.iconOffsetY ?? 0,
-    iconOffsetX: p.iconOffsetX ?? 0,   // ← เพิ่มบรรทัดนี้
+    iconOffsetX: p.iconOffsetX ?? 0,
 })));
 
   return `<!DOCTYPE html>
@@ -378,6 +386,14 @@ function buildChipsInner(plant) {
     <div style="display:flex;align-items:center;gap:6px;
       font-size:18px;font-weight:400;white-space:nowrap;">
 
+      <svg width="12" height="12" viewBox="0 0 24 24">
+        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"
+          stroke="\${pCol}" stroke-width="2" fill="\${pCol}" opacity="0.9"/>
+      </svg>
+      <span style="color:\${pCol}">\${pKw} kW</span>
+
+      <span style="color:rgba(255,255,255,0.25);font-weight:300">│</span>
+
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
         <circle cx="12" cy="12" r="4" stroke="\${irrCol}" stroke-width="2.5"/>
         \${[0,45,90,135,180,225,270,315].map(deg => {
@@ -391,14 +407,6 @@ function buildChipsInner(plant) {
         }).join('')}
       </svg>
       <span style="color:\${irrCol}">\${irrW} W/m²</span>
-
-      <span style="color:rgba(255,255,255,0.25);font-weight:300">│</span>
-
-      <svg width="12" height="12" viewBox="0 0 24 24">
-        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"
-          stroke="\${pCol}" stroke-width="2" fill="\${pCol}" opacity="0.9"/>
-      </svg>
-      <span style="color:\${pCol}">\${pKw} kW</span>
     </div>
   \`;
 }
@@ -479,7 +487,7 @@ plants.forEach(p => {
     className: '',
     html: buildMarkerHtml(p),
     iconSize:   [40, 40],
-    iconAnchor: [20 - (p.iconOffsetX ?? 0), 20 - (p.iconOffsetY ?? 0)],   
+    iconAnchor: [20 - (p.iconOffsetX ?? 0), 20 - (p.iconOffsetY ?? 0)],
   });
 
   const marker = L.marker([p.lat, p.lng], { icon: svgIcon }).addTo(map);
@@ -673,8 +681,7 @@ const FleetOverviewPage = ({ theme, onEnterDashboard, onFleetDataUpdate, onWeath
   const [selected, setSelected]       = useState(null);
   const [filterType, setFilterType]   = useState('all');
   const [showPRFormula, setShowPRFormula] = useState(false);
-  // ── NEW: breakdown modal state ───────────────────────────
-  const [breakdownModal, setBreakdownModal] = useState(null); // 'yield' | 'revenue' | null
+  const [breakdownModal, setBreakdownModal] = useState(null);
 
   const activePlant   = plantData.find(p => p.id === selected) ?? null;
   const activeWeather = selected ? plantWeather[selected] : null;
@@ -748,10 +755,19 @@ const FleetOverviewPage = ({ theme, onEnterDashboard, onFleetDataUpdate, onWeath
     <div className={`flex flex-col h-full ${dk ? 'bg-slate-900' : 'bg-slate-50'}`}>
       <div className="flex flex-1 min-h-0 overflow-hidden">
 
-        {/* LEFT ───────────────────────────────────────────── */}
+        {/* ════════════════════════════════════════════════════
+            LEFT COLUMN
+            ─ Group A · Live Monitoring  → Real-Time Power
+            ─ Group B · Key Metrics      → Yield / Revenue / PR
+            ─ Group C · Operations       → O&M + Environmental
+            ════════════════════════════════════════════════════ */}
         <div className={`w-80 flex-shrink-0 flex flex-col gap-2 p-3 overflow-y-auto border-r ${
           dk ? 'border-slate-700' : 'border-slate-200'
         }`}>
+
+          {/* ── Group A · Live Monitoring ── */}
+          <SectionLabel label="Live Monitoring" dk={dk} sub={sub} />
+
           <Panel theme={theme} className="p-3">
             <div className="flex items-center justify-between mb-1">
               <p className={`text-sm font-bold ${tx}`}>Real-Time Power</p>
@@ -778,6 +794,9 @@ const FleetOverviewPage = ({ theme, onEnterDashboard, onFleetDataUpdate, onWeath
               </AreaChart>
             </ResponsiveContainer>
           </Panel>
+
+          {/* ── Group B · Key Metrics ── */}
+          <SectionLabel label="Key Metrics" dk={dk} sub={sub} />
 
           {(() => {
             const p = activePlant;
@@ -849,6 +868,10 @@ const FleetOverviewPage = ({ theme, onEnterDashboard, onFleetDataUpdate, onWeath
             ));
           })()}
 
+          {/* ── Group C · Operations ── */}
+          <SectionLabel label="Operations" dk={dk} sub={sub} />
+
+          {/* O&M Statistics + Environmental Benefits — รวมใน Panel เดียว */}
           <Panel theme={theme} className="p-3">
             <p className={`text-sm font-bold mb-2 ${tx}`}>O&M Statistics</p>
             <div className="flex items-center gap-3">
@@ -872,35 +895,36 @@ const FleetOverviewPage = ({ theme, onEnterDashboard, onFleetDataUpdate, onWeath
                 ))}
               </div>
             </div>
-          </Panel>
 
-          <Panel theme={theme} className="p-3">
-            <p className={`text-sm font-bold mb-2 ${tx}`}>Environmental Benefits</p>
-            <div className="flex justify-around mb-2">
-              {[{icon:'🚂',label:'Coal saved'},{icon:'🏭',label:'CO₂ avoided'},{icon:'🌲',label:'Trees equiv.'}]
-                .map((e,i) => (
-                  <div key={i} className="flex flex-col items-center gap-0.5">
-                    <span className="text-xl">{e.icon}</span>
-                    <p className={`text-[9px] text-center ${sub}`}>{e.label}</p>
+            {/* Divider between O&M and Environmental */}
+            <div className={`border-t mt-3 pt-3 ${dk ? 'border-slate-700' : 'border-slate-200'}`}>
+              <p className={`text-sm font-bold mb-2 ${tx}`}>Environmental Benefits</p>
+              <div className="flex justify-around mb-2">
+                {[{icon:'🚂',label:'Coal saved'},{icon:'🏭',label:'CO₂ avoided'},{icon:'🌲',label:'Trees equiv.'}]
+                  .map((e,i) => (
+                    <div key={i} className="flex flex-col items-center gap-0.5">
+                      <span className="text-xl">{e.icon}</span>
+                      <p className={`text-[9px] text-center ${sub}`}>{e.label}</p>
+                    </div>
+                  ))}
+              </div>
+              <div className={`rounded-lg overflow-hidden border text-[9px] ${dk?'border-slate-700':'border-slate-100'}`}>
+                <div className={`grid grid-cols-4 font-bold px-2 py-1 ${dk?'bg-slate-700 text-slate-300':'bg-slate-100 text-slate-600'}`}>
+                  <span/><span className="text-right">Coal</span>
+                  <span className="text-right">CO₂</span><span className="text-right">Trees</span>
+                </div>
+                {[
+                  {label:'Annual',coal:'11.75K',co2:'13.95K',trees:'19.45K'},
+                  {label:'Total', coal:'122.3K',co2:'145.2K',trees:'198.9K'},
+                ].map(r => (
+                  <div key={r.label} className={`grid grid-cols-4 px-2 py-1 border-t ${dk?'border-slate-700 text-slate-400':'border-slate-100 text-slate-600'}`}>
+                    <span className="font-semibold">{r.label}</span>
+                    <span className="text-right text-green-400">{r.coal}</span>
+                    <span className="text-right text-blue-400">{r.co2}</span>
+                    <span className="text-right text-emerald-400">{r.trees}</span>
                   </div>
                 ))}
-            </div>
-            <div className={`rounded-lg overflow-hidden border text-[9px] ${dk?'border-slate-700':'border-slate-100'}`}>
-              <div className={`grid grid-cols-4 font-bold px-2 py-1 ${dk?'bg-slate-700 text-slate-300':'bg-slate-100 text-slate-600'}`}>
-                <span/><span className="text-right">Coal</span>
-                <span className="text-right">CO₂</span><span className="text-right">Trees</span>
               </div>
-              {[
-                {label:'Annual',coal:'11.75K',co2:'13.95K',trees:'19.45K'},
-                {label:'Total', coal:'122.3K',co2:'145.2K',trees:'198.9K'},
-              ].map(r => (
-                <div key={r.label} className={`grid grid-cols-4 px-2 py-1 border-t ${dk?'border-slate-700 text-slate-400':'border-slate-100 text-slate-600'}`}>
-                  <span className="font-semibold">{r.label}</span>
-                  <span className="text-right text-green-400">{r.coal}</span>
-                  <span className="text-right text-blue-400">{r.co2}</span>
-                  <span className="text-right text-emerald-400">{r.trees}</span>
-                </div>
-              ))}
             </div>
           </Panel>
 
@@ -1043,10 +1067,19 @@ const FleetOverviewPage = ({ theme, onEnterDashboard, onFleetDataUpdate, onWeath
           )}
         </div>
 
-        {/* RIGHT ──────────────────────────────────────────── */}
+        {/* ════════════════════════════════════════════════════
+            RIGHT COLUMN
+            ─ Group A · Production   → Yield This Month
+            ─ Group B · Fleet Status → Ranking + Plant Status
+            ─ Group C · Alerts       → Active Alarms
+            ════════════════════════════════════════════════════ */}
         <div className={`w-80 flex-shrink-0 flex flex-col gap-2 p-3 overflow-y-auto border-l ${
           dk ? 'border-slate-700' : 'border-slate-200'
         }`}>
+
+          {/* ── Group A · Production ── */}
+          <SectionLabel label="Production" dk={dk} sub={sub} />
+
           <Panel theme={theme} className="p-3">
             <div className="flex items-center justify-between mb-1">
               <p className={`text-sm font-bold ${tx}`}>Yield This Month</p>
@@ -1070,6 +1103,10 @@ const FleetOverviewPage = ({ theme, onEnterDashboard, onFleetDataUpdate, onWeath
             </ResponsiveContainer>
           </Panel>
 
+          {/* ── Group B · Fleet Status ── */}
+          <SectionLabel label="Fleet Status" dk={dk} sub={sub} />
+
+          {/* Energy Yield Ranking + Plant Status — รวมใน Panel เดียว */}
           <Panel theme={theme} className="p-3">
             <p className={`text-sm font-bold mb-1 ${tx}`}>Energy Yield Ranking</p>
             <p className={`text-xs ${sub} mb-2`}>Yield today (kWh)</p>
@@ -1090,41 +1127,45 @@ const FleetOverviewPage = ({ theme, onEnterDashboard, onFleetDataUpdate, onWeath
                   </div>
                 );
               })}
-          </Panel>
 
-          <Panel theme={theme} className="p-3">
-            <p className={`text-sm font-bold mb-2 ${tx}`}>Plant Status</p>
-            <div className="space-y-1.5">
-              {plantData.map((p) => {
-                const w = plantWeather[p.id];
-                const tempCol = w
-                  ? (w.temp > 35 ? 'text-orange-400' : w.temp < 20 ? 'text-blue-400' : 'text-green-400')
-                  : sub;
-                return (
-                  <div key={p.id}
-                    onClick={() => selectPlant(p.id)}
-                    className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition border ${
-                      selected === p.id
-                        ? dk ? 'bg-blue-900/30 border-blue-700' : 'bg-blue-50 border-blue-200'
-                        : dk ? 'hover:bg-slate-700 border-slate-700' : 'hover:bg-slate-50 border-slate-100'
-                    }`}>
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full flex-shrink-0 animate-pulse"
-                        style={{ background: statusColor(p.status) }} />
-                      <div>
-                        <p className={`text-sm font-semibold ${tx}`}>{p.name}</p>
-                        <p className={`text-xs ${sub}`}>{fmt(p.power)} kW · {p.toNow.toLocaleString()} kWh today</p>
+            {/* Divider between Ranking and Plant Status */}
+            <div className={`border-t mt-3 pt-3 ${dk ? 'border-slate-700' : 'border-slate-200'}`}>
+              <p className={`text-sm font-bold mb-2 ${tx}`}>Plant Status</p>
+              <div className="space-y-1.5">
+                {plantData.map((p) => {
+                  const w = plantWeather[p.id];
+                  const tempCol = w
+                    ? (w.temp > 35 ? 'text-orange-400' : w.temp < 20 ? 'text-blue-400' : 'text-green-400')
+                    : sub;
+                  return (
+                    <div key={p.id}
+                      onClick={() => selectPlant(p.id)}
+                      className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition border ${
+                        selected === p.id
+                          ? dk ? 'bg-blue-900/30 border-blue-700' : 'bg-blue-50 border-blue-200'
+                          : dk ? 'hover:bg-slate-700 border-slate-700' : 'hover:bg-slate-50 border-slate-100'
+                      }`}>
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full flex-shrink-0 animate-pulse"
+                          style={{ background: statusColor(p.status) }} />
+                        <div>
+                          <p className={`text-sm font-semibold ${tx}`}>{p.name}</p>
+                          <p className={`text-xs ${sub}`}>{fmt(p.power)} kW · {p.toNow.toLocaleString()} kWh today</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        {w && <span className={`text-[9px] font-bold ${tempCol}`}>{w.temp}°C</span>}
+                        <ChevronRight className={`w-3.5 h-3.5 ${sub}`} />
                       </div>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      {w && <span className={`text-[9px] font-bold ${tempCol}`}>{w.temp}°C</span>}
-                      <ChevronRight className={`w-3.5 h-3.5 ${sub}`} />
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           </Panel>
+
+          {/* ── Group C · Alerts ── */}
+          <SectionLabel label="Alerts" dk={dk} sub={sub} />
 
           {(() => {
             const src = activePlant ? [activePlant] : plantData;
@@ -1312,6 +1353,7 @@ const FleetOverviewPage = ({ theme, onEnterDashboard, onFleetDataUpdate, onWeath
           }`}
           onClick={(e) => e.stopPropagation()}
         >
+        
           <div className="flex items-center justify-between mb-5">
             <div>
               <h3 className={`text-base font-bold ${tx}`}>Performance Ratio Formula</h3>
@@ -1393,6 +1435,7 @@ const FleetOverviewPage = ({ theme, onEnterDashboard, onFleetDataUpdate, onWeath
           >
             Close
           </button>
+
         </div>
       </div>
     )}
