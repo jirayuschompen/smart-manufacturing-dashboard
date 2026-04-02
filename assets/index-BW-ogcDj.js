@@ -121,6 +121,14 @@ function buildChipsInner(plant) {
     <div style="display:flex;align-items:center;gap:6px;
       font-size:18px;font-weight:400;white-space:nowrap;">
 
+      <svg width="12" height="12" viewBox="0 0 24 24">
+        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"
+          stroke="\${pCol}" stroke-width="2" fill="\${pCol}" opacity="0.9"/>
+      </svg>
+      <span style="color:\${pCol}">\${pKw} kW</span>
+
+      <span style="color:rgba(255,255,255,0.25);font-weight:300">│</span>
+
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
         <circle cx="12" cy="12" r="4" stroke="\${irrCol}" stroke-width="2.5"/>
         \${[0,45,90,135,180,225,270,315].map(deg => {
@@ -134,14 +142,6 @@ function buildChipsInner(plant) {
         }).join('')}
       </svg>
       <span style="color:\${irrCol}">\${irrW} W/m²</span>
-
-      <span style="color:rgba(255,255,255,0.25);font-weight:300">│</span>
-
-      <svg width="12" height="12" viewBox="0 0 24 24">
-        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"
-          stroke="\${pCol}" stroke-width="2" fill="\${pCol}" opacity="0.9"/>
-      </svg>
-      <span style="color:\${pCol}">\${pKw} kW</span>
     </div>
   \`;
 }
